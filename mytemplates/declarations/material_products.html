@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Material Products - Zahnovia{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-boxes"></i> Material Products
+            </h1>
+            <p class="page-subtitle">Hazır malzeme ve ürün kombinasyonları</p>
+        </div>
+        <a href="{% url 'material_product_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Yeni Product
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    {% if products %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Material</th>
+                <th>Hersteller</th>
+                <th>Bestandteile</th>
+                <th>CE</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr>
+                <td><strong>{{ product.material }}</strong></td>
+                <td>{{ product.firma }}</td>
+                <td>{{ product.bestandteile }}</td>
+                <td>
+                    {% if product.ce_status == "Ja" %}
+                    <span style="color: #28a745;">
+                        <i class="fas fa-check-circle"></i> {{ product.ce_status }}
+                    </span>
+                    {% else %}
+                    {{ product.ce_status }}
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="POST" action="{% url 'material_product_delete' product.pk %}" style="display: inline;" onsubmit="return confirm('Bu ürünü silmek istediğinize emin misiniz?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn" style="background: #dc3545; color: white; padding: 8px 16px; font-size: 14px;">
+                            <i class="fas fa-trash"></i> Sil
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 60px 20px;">
+        <i class="fas fa-box-open" style="font-size: 64px; color: #e2e8f0; margin-bottom: 20px;"></i>
+        <h3 style="color: #718096; margin-bottom: 15px;">Henüz Ürün Yok</h3>
+        <p style="color: #a0aec0; margin-bottom: 25px;">Henüz hiç material product oluşturmadınız.</p>
+        <a href="{% url 'material_product_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> İlk Ürünü Oluştur
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

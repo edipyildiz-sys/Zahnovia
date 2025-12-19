@@ -1,0 +1,53 @@
+# Python
+*.py[cod]
+*$py.class
+*.so
+.Python
+__pycache__/
+*.pyc
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+
+# Environment variables - GİZLİ BİLGİLER!
+.env
+*.env
+
+# Google Drive Credentials - ÇOK ÖNEMLİ!
+credentials.json
+token.pickle
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+temp_pdfs/
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Collected static files
+/static/
+
+# Backup files
+*.backup
+.claude.json
+.claude.json.backup
+
+# Tooth diagram HTML (too large)
+tooth_diagrams.html
+tooth_footer.html

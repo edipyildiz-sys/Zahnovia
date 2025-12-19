@@ -1,0 +1,339 @@
+{% extends 'base.html' %}
+
+{% block title %}Neue Konformitätserklärung - Zahnovia{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        zoom: 0.9;
+        -moz-transform: scale(0.9);
+        -moz-transform-origin: 0 0;
+    }
+
+    .form-control, select.form-control {
+        padding: 10px;
+        border: 2px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .form-control:focus, select.form-control:focus {
+        border-color: #17a2b8;
+        outline: none;
+    }
+
+    input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+
+    .bestandteile-input {
+        background-color: #f7fafc !important;
+    }
+</style>
+
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="fas fa-file-alt"></i> Neue Konformitätserklärung
+    </h1>
+    <p class="page-subtitle">Erstellen Sie Ihre Erklärung</p>
+</div>
+
+<div class="card">
+    <form method="POST" id="declaration-form">
+        {% csrf_token %}
+
+        <h3 style="margin-bottom: 20px; color: #2d3748;">
+            <i class="fas fa-user"></i> Patienteninformationen
+        </h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div class="form-group">
+                <label class="form-label">Verordnender Arzt *</label>
+                <input type="text" name="verordnender_arzt" class="form-control"
+                       value="{{ hersteller_profile.verordnender_arzt|default:'' }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Auftragsnummer</label>
+                <input type="text" name="auftragsnummer" class="form-control" placeholder="Auftragsnummer">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Patientenname *</label>
+                <input type="text" name="patient_name" class="form-control" required>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <div class="form-group">
+                <label class="form-label">Herstellungsdatum *</label>
+                <input type="date" name="herstellungsdatum" class="form-control" style="max-width: 300px;" required>
+            </div>
+        </div>
+
+        <h3 style="margin-bottom: 20px; color: #2d3748; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+            <i class="fas fa-tooth"></i> Produktbezeichnung / Arbeit
+        </h3>
+
+        {{ product_work_formset.management_form }}
+
+        <div id="product-work-container">
+            {% for form in product_work_formset %}
+            <div class="product-work-row" data-row-index="{{ forloop.counter0 }}">
+                {{ form.id }}
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 60px; gap: 10px; margin-bottom: 15px; align-items: end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Produktbezeichnung / Arbeit *</label>
+                        {{ form.produktbezeichnung_arbeit }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Zahnnummer</label>
+                        {{ form.zahnnummer }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Zahnfarbe</label>
+                        {{ form.zahnfarbe }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="visibility: hidden;">Del</label>
+                        {{ form.DELETE }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 15px; margin-bottom: 30px;">
+            <button type="button" id="add-product-work-btn" class="btn" style="background: #17a2b8; color: white;">
+                <i class="fas fa-plus"></i> Zeile hinzufügen
+            </button>
+        </div>
+
+        <h3 style="margin-bottom: 25px; color: #2d3748; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+            <i class="fas fa-list"></i> Materialien
+        </h3>
+
+        {{ material_formset.management_form }}
+
+        <div id="material-container">
+            {% for form in material_formset %}
+            <div class="material-row" data-row-index="{{ forloop.counter0 }}">
+                {{ form.id }}
+                <div style="display: grid; grid-template-columns: 200px 200px 1fr 150px 80px 60px; gap: 10px; margin-bottom: 15px; align-items: end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Material *</label>
+                        {{ form.material }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Hersteller *</label>
+                        {{ form.firma }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Bestandteile</label>
+                        {{ form.bestandteile }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Lot No. *</label>
+                        {{ form.material_lot_no }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">CE</label>
+                        {{ form.ce_status }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="visibility: hidden;">Del</label>
+                        {{ form.DELETE }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 15px; margin-bottom: 30px;">
+            <button type="button" id="add-material-btn" class="btn" style="background: #17a2b8; color: white;">
+                <i class="fas fa-plus"></i> Zeile hinzufügen
+            </button>
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0; display: flex; gap: 15px;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Erklärung Erstellen
+            </button>
+            <a href="{% url 'dashboard' %}" class="btn" style="background: #e2e8f0; color: #2d3748;">
+                <i class="fas fa-times"></i> Abbrechen
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Material Products verilerini JavaScript objesine çevir
+const materialProducts = [
+    {% for product in material_products %}
+    {
+        id: {{ product.id }},
+        material: "{{ product.material|escapejs }}",
+        firma: "{{ product.firma|escapejs }}",
+        bestandteile: "{{ product.bestandteile|escapejs }}",
+    },
+    {% endfor %}
+];
+
+// Benzersiz material ve firma değerlerini çıkar
+const uniqueMaterials = [...new Set(materialProducts.map(p => p.material))].sort();
+const uniqueFirmas = [...new Set(materialProducts.map(p => p.firma))].sort();
+
+// Dropdown'ları doldur
+function populateDropdowns() {
+    document.querySelectorAll('.material-select').forEach(select => {
+        if (select.options.length <= 1) {  // Sadece boşsa doldur
+            select.innerHTML = '<option value="">--- Wählen Sie ---</option>';
+            uniqueMaterials.forEach(material => {
+                const option = document.createElement('option');
+                option.value = material;
+                option.textContent = material;
+                select.appendChild(option);
+            });
+        }
+    });
+
+    document.querySelectorAll('.firma-select').forEach(select => {
+        if (select.options.length <= 1) {  // Sadece boşsa doldur
+            select.innerHTML = '<option value="">--- Wählen Sie ---</option>';
+            uniqueFirmas.forEach(firma => {
+                const option = document.createElement('option');
+                option.value = firma;
+                option.textContent = firma;
+                select.appendChild(option);
+            });
+        }
+    });
+}
+
+// Material veya Firma değiştiğinde Bestandteile'yi otomatik doldur
+function attachChangeHandlers() {
+    document.querySelectorAll('.material-row').forEach(row => {
+        const materialSelect = row.querySelector('.material-select');
+        const firmaSelect = row.querySelector('.firma-select');
+        const bestandteileInput = row.querySelector('.bestandteile-input');
+
+        function updateBestandteile() {
+            const material = materialSelect.value;
+            const firma = firmaSelect.value;
+
+            if (material && firma) {
+                // Matching product bul
+                const matchingProduct = materialProducts.find(p =>
+                    p.material === material && p.firma === firma
+                );
+
+                if (matchingProduct) {
+                    bestandteileInput.value = matchingProduct.bestandteile;
+                } else {
+                    // Eşleşme yoksa boş bırak
+                    bestandteileInput.value = '';
+                }
+            }
+        }
+
+        materialSelect.addEventListener('change', updateBestandteile);
+        firmaSelect.addEventListener('change', updateBestandteile);
+    });
+}
+
+// Product Work - Zeile hinzufügen butonu
+document.getElementById('add-product-work-btn').addEventListener('click', function() {
+    const container = document.getElementById('product-work-container');
+    const totalFormsInput = document.querySelector('#id_product_works-TOTAL_FORMS');
+    const currentTotal = parseInt(totalFormsInput.value);
+
+    // Yeni satırı klonla (son satırdan)
+    const lastRow = container.querySelector('.product-work-row:last-child');
+    const newRow = lastRow.cloneNode(true);
+
+    // Index'i güncelle
+    newRow.setAttribute('data-row-index', currentTotal);
+
+    // Formdaki tüm input field'larını güncelle
+    newRow.querySelectorAll('input, select').forEach(field => {
+        const name = field.getAttribute('name');
+        if (name) {
+            const newName = name.replace(/product_works-\d+/, `product_works-${currentTotal}`);
+            field.setAttribute('name', newName);
+            field.setAttribute('id', `id_${newName}`);
+
+            // Değerleri temizle
+            if (field.type === 'checkbox') {
+                field.checked = false;
+            } else if (field.tagName === 'SELECT') {
+                field.selectedIndex = 0;
+            } else if (!field.id.includes('-id')) {
+                field.value = '';
+            }
+        }
+    });
+
+    // Yeni satırı ekle
+    container.appendChild(newRow);
+
+    // Total forms sayısını artır
+    totalFormsInput.value = currentTotal + 1;
+});
+
+// Material - Zeile hinzufügen butonu
+document.getElementById('add-material-btn').addEventListener('click', function() {
+    const container = document.getElementById('material-container');
+    const totalFormsInput = document.querySelector('#id_materials-TOTAL_FORMS');
+    const currentTotal = parseInt(totalFormsInput.value);
+
+    // Yeni satırı klonla (son satırdan)
+    const lastRow = container.querySelector('.material-row:last-child');
+    const newRow = lastRow.cloneNode(true);
+
+    // Index'i güncelle
+    newRow.setAttribute('data-row-index', currentTotal);
+
+    // Formdaki tüm input field'larını güncelle
+    newRow.querySelectorAll('input, select').forEach(field => {
+        const name = field.getAttribute('name');
+        if (name) {
+            const newName = name.replace(/materials-\d+/, `materials-${currentTotal}`);
+            field.setAttribute('name', newName);
+            field.setAttribute('id', `id_${newName}`);
+
+            // Değerleri temizle
+            if (field.type === 'checkbox') {
+                field.checked = false;
+            } else if (field.tagName === 'SELECT') {
+                field.selectedIndex = 0;
+            } else if (!field.id.includes('-id')) {
+                field.value = field.classList.contains('form-control') && field.getAttribute('value') === 'Ja' ? 'Ja' : '';
+            }
+        }
+    });
+
+    // Yeni satırı ekle
+    container.appendChild(newRow);
+
+    // Total forms sayısını artır
+    totalFormsInput.value = currentTotal + 1;
+
+    // Dropdown'ları yeniden doldur ve event handler'ları ekle
+    populateDropdowns();
+    attachChangeHandlers();
+});
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+    populateDropdowns();
+    attachChangeHandlers();
+
+    // CE status field'larına default "Ja" değerini set et
+    document.querySelectorAll('input[name*="ce_status"]').forEach(input => {
+        if (!input.value) {
+            input.value = 'Ja';
+        }
+    });
+});
+</script>
+{% endblock %}

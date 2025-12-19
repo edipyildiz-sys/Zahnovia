@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Hersteller Profil{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Hersteller Profil</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="id_firma_name" class="form-label">Firma Adı *</label>
+                            <input type="text" class="form-control" id="id_firma_name" name="firma_name"
+                                   value="{{ profile.firma_name|default:'' }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_strasse" class="form-label">Straße *</label>
+                            <input type="text" class="form-control" id="id_strasse" name="strasse"
+                                   value="{{ profile.strasse|default:'' }}" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="id_plz" class="form-label">PLZ *</label>
+                                    <input type="text" class="form-control" id="id_plz" name="plz"
+                                           value="{{ profile.plz|default:'' }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="id_ort" class="form-label">Ort *</label>
+                                    <input type="text" class="form-control" id="id_ort" name="ort"
+                                           value="{{ profile.ort|default:'' }}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_telefon" class="form-label">Telefon *</label>
+                            <input type="text" class="form-control" id="id_telefon" name="telefon"
+                                   value="{{ profile.telefon|default:'' }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">E-Mail *</label>
+                            <input type="email" class="form-control" id="id_email" name="email"
+                                   value="{{ profile.email|default:'' }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_verordnender_arzt" class="form-label">Verordnender Arzt</label>
+                            <input type="text" class="form-control" id="id_verordnender_arzt" name="verordnender_arzt"
+                                   value="{{ profile.verordnender_arzt|default:'' }}">
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                {% if profile %}Güncelle{% else %}Kaydet{% endif %}
+                            </button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">İptal</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

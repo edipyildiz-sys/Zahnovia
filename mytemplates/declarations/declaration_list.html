@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Konformitätserklärungen - Zahnovia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .clickable-row {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .clickable-row:hover {
+        background: #f7fafc !important;
+        transform: scale(1.01);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .pdf-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .pdf-btn:hover {
+        background: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+    .pdf-btn:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .status-ready {
+        background: #d4edda;
+        color: #155724;
+    }
+    .status-pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-list"></i> Konformitätserklärungen
+            </h1>
+            <p class="page-subtitle">Alle Ihre erstellten Erklärungen</p>
+        </div>
+        <a href="{% url 'declaration_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Neue Erklärung
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    {% if declarations %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Patientenname</th>
+                <th>Auftragsnummer</th>
+                <th>Nummer</th>
+                <th>Erstellt</th>
+                <th style="width: 120px; text-align: center;">Status</th>
+                <th style="width: 100px; text-align: center;">PDF</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for decl in declarations %}
+            <tr>
+                <td onclick="window.location='{% url 'declaration_detail' decl.pk %}'" style="cursor: pointer;"><strong>{{ decl.patient_name }}</strong></td>
+                <td onclick="window.location='{% url 'declaration_detail' decl.pk %}'" style="cursor: pointer;">{{ decl.auftragsnummer|default:"-" }}</td>
+                <td onclick="window.location='{% url 'declaration_detail' decl.pk %}'" style="cursor: pointer;">
+                    <strong style="color: #17a2b8;">{{ decl.declaration_number }}</strong>
+                </td>
+                <td onclick="window.location='{% url 'declaration_detail' decl.pk %}'" style="cursor: pointer;">{{ decl.created_at|date:"d.m.Y H:i" }}</td>
+                <td style="text-align: center;">
+                    {% if decl.pdf_url %}
+                    <span class="status-badge status-ready">
+                        <i class="fas fa-check-circle"></i> Fertig
+                    </span>
+                    {% else %}
+                    <span class="status-badge status-pending">
+                        <i class="fas fa-clock"></i> Entwurf
+                    </span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    {% if decl.pdf_url %}
+                    <a href="{{ decl.pdf_url }}" target="_blank" class="pdf-btn" onclick="event.stopPropagation();">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </a>
+                    {% else %}
+                    <button class="pdf-btn" disabled>
+                        <i class="fas fa-spinner"></i> —
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 60px 20px;">
+        <i class="fas fa-inbox" style="font-size: 64px; color: #e2e8f0; margin-bottom: 20px;"></i>
+        <h3 style="color: #718096; margin-bottom: 15px;">Keine Erklärungen vorhanden</h3>
+        <p style="color: #a0aec0; margin-bottom: 25px;">Sie haben noch keine Konformitätserklärung erstellt.</p>
+        <a href="{% url 'declaration_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Erste Erklärung Erstellen
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
