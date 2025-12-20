@@ -4,7 +4,9 @@
       "Bash(python3:*)",
       "Bash(where:*)",
       "Bash(C:UsersEdipAppDataLocalProgramsPythonPython313python.exe -c:*)",
-      "Bash(/c/Users/Edip/AppData/Local/Programs/Python/Python313/python.exe -c:*)"
+      "Bash(/c/Users/Edip/AppData/Local/Programs/Python/Python313/python.exe -c:*)",
+      "Bash(python manage.py makemigrations:*)",
+      "Bash(/c/Users/Edip/AppData/Local/Programs/Python/Python313/python.exe manage.py:*)"
     ]
   }
 }

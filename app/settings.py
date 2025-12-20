@@ -4,9 +4,13 @@ Django settings for Zahnovia project.
 
 from pathlib import Path
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env file if it exists (for production)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, use default values
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

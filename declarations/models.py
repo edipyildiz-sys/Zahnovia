@@ -126,7 +126,10 @@ class DeclarationItem(models.Model):
 class MaterialProduct(models.Model):
     """Hazır malzeme ürün kombinasyonları (Zahntec labor_products gibi)"""
 
-    name = models.CharField(max_length=200, help_text="Ürün kombinasyon adı", unique=True)
+    # Kullanıcıya özel malzeme
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='material_products')
+
+    name = models.CharField(max_length=200, help_text="Ürün kombinasyon adı")
 
     # Yeni Zahntec formatı
     material = models.CharField(max_length=200, verbose_name="Material", help_text="Malzeme")

@@ -152,8 +152,8 @@ def declaration_detail(request, pk):
 
 @login_required
 def material_products_list(request):
-    """Material Products listesi"""
-    products = MaterialProduct.objects.all().order_by('name')
+    """Material Products listesi - Sadece kullanıcının malzemeleri"""
+    products = MaterialProduct.objects.filter(user=request.user).order_by('name')
     return render(request, 'declarations/material_products.html', {'products': products})
 
 
@@ -170,6 +170,7 @@ def material_product_create(request):
         name = f"{material} - {firma}"
 
         MaterialProduct.objects.create(
+            user=request.user,
             name=name,
             material=material,
             firma=firma,
