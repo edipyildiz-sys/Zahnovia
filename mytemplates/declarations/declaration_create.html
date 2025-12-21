@@ -4,12 +4,6 @@
 
 {% block content %}
 <style>
-    body {
-        zoom: 0.9;
-        -moz-transform: scale(0.9);
-        -moz-transform-origin: 0 0;
-    }
-
     .form-control, select.form-control {
         padding: 10px;
         border: 2px solid #e2e8f0;
@@ -247,7 +241,7 @@ document.getElementById('add-product-work-btn').addEventListener('click', functi
     const totalFormsInput = document.querySelector('#id_product_works-TOTAL_FORMS');
     const currentTotal = parseInt(totalFormsInput.value);
 
-    // Yeni satırı klonla (son satırdan)
+    // Neue Zeile klonen (son satırdan)
     const lastRow = container.querySelector('.product-work-row:last-child');
     const newRow = lastRow.cloneNode(true);
 
@@ -273,7 +267,7 @@ document.getElementById('add-product-work-btn').addEventListener('click', functi
         }
     });
 
-    // Yeni satırı ekle
+    // Neue Zeile hinzufügen
     container.appendChild(newRow);
 
     // Total forms sayısını artır
@@ -286,7 +280,7 @@ document.getElementById('add-material-btn').addEventListener('click', function()
     const totalFormsInput = document.querySelector('#id_materials-TOTAL_FORMS');
     const currentTotal = parseInt(totalFormsInput.value);
 
-    // Yeni satırı klonla (son satırdan)
+    // Neue Zeile klonen (son satırdan)
     const lastRow = container.querySelector('.material-row:last-child');
     const newRow = lastRow.cloneNode(true);
 
@@ -312,7 +306,7 @@ document.getElementById('add-material-btn').addEventListener('click', function()
         }
     });
 
-    // Yeni satırı ekle
+    // Neue Zeile hinzufügen
     container.appendChild(newRow);
 
     // Total forms sayısını artır

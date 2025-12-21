@@ -151,3 +151,45 @@ class MaterialProduct(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.material})"
+
+
+class ArchiveDocument(models.Model):
+    """Dijital Arşiv - PDF Dökümanları"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='archive_documents')
+    title = models.CharField(max_length=200, verbose_name="Titel")
+    description = models.TextField(blank=True, verbose_name="Beschreibung")
+    
+    # Google Drive bilgileri
+    drive_file_id = models.CharField(max_length=200, blank=True)
+    drive_url = models.URLField(blank=True)
+    
+    # Döküman bilgileri
+    file_name = models.CharField(max_length=200)
+    upload_date = models.DateTimeField(auto_now_add=True)
+    document_date = models.DateField(null=True, blank=True, verbose_name="Dokumentdatum")
+    
+    # Kategoriler
+    CATEGORY_CHOICES = [
+        ('invoice', 'Rechnung'),
+        ('declaration', 'Erklärung'),
+        ('certificate', 'Zertifikat'),
+        ('contract', 'Vertrag'),
+        ('other', 'Sonstiges'),
+    ]
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other', verbose_name="Kategorie")
+    custom_category = models.CharField(max_length=100, blank=True, verbose_name="Özel Kategori")
+    
+    class Meta:
+        ordering = ['-upload_date']
+        verbose_name = 'Archiv Dokument'
+        verbose_name_plural = 'Archiv Dokumente'
+    
+    def __str__(self):
+        return f"{self.title} ({self.upload_date.strftime('%d.%m.%Y')})"
+
+    def get_display_category(self):
+        """Gösterilecek kategori ismini döner"""
+        if self.custom_category:
+            return self.custom_category
+        return self.get_category_display()

@@ -21,4 +21,11 @@ urlpatterns = [
 
     # Hersteller Profile
     path('hersteller-profile/', views.hersteller_profile, name='hersteller_profile'),
+
+
+    # Archive
+    path('archive/', views.archive_list, name='archive_list'),
+    path('archive/upload/', views.archive_upload, name='archive_upload'),
+    path('archive/<int:pk>/', views.archive_view, name='archive_view'),
+    path('archive/<int:pk>/delete/', views.archive_delete, name='archive_delete'),
 ]

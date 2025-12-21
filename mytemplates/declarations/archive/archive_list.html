@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}Digitales Archiv - Zahnovia{% endblock %}
+
+{% block extra_css %}
+<style>
+.open-btn { background: #17a2b8; color: white; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; border: none; cursor: pointer; }
+.open-btn:hover { background: #138496; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3); color: white; }
+.delete-btn { background: #dc3545; color: white; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; transition: all 0.3s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; border: none; cursor: pointer; }
+.delete-btn:hover { background: #c82333; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3); color: white; }
+.badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.badge-invoice { background: #e3f2fd; color: #1976d2; }
+.badge-declaration { background: #f3e5f5; color: #7b1fa2; }
+.badge-certificate { background: #e8f5e9; color: #388e3c; }
+.badge-contract { background: #fff3e0; color: #f57c00; }
+.badge-other { background: #eceff1; color: #546e7a; }
+.modal { display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); }
+.modal-content { background:#fff; margin:3% auto; border-radius:12px; width:90%; max-width:700px; box-shadow:0 10px 40px rgba(0,0,0,0.3); }
+.modal-header { display:flex; justify-content:space-between; align-items:center; padding:25px 30px; border-bottom:1px solid #e2e8f0; }
+.modal-header h2 { margin:0; color:#2d3748; font-size:24px; }
+.close { font-size:32px; color:#718096; cursor:pointer; line-height:1; }
+.close:hover { color:#dc3545; }
+.upload-form { padding:30px; }
+.form-group { margin-bottom:20px; }
+.form-group label { display:block; margin-bottom:8px; font-weight:600; color:#2d3748; }
+.form-control { width:100%; padding:12px 15px; border:1px solid #e2e8f0; border-radius:6px; font-size:14px; }
+.modal-footer { display:flex; gap:15px; justify-content:flex-end; padding:20px 30px; border-top:1px solid #e2e8f0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 class="page-title"><i class="fas fa-archive"></i> Digitales Archiv</h1>
+            <p class="page-subtitle">Alle Ihre archivierten Dokumente</p>
+        </div>
+        <button onclick="openUploadModal()" class="btn btn-primary"><i class="fas fa-upload"></i> Neues Dokument</button>
+    </div>
+</div>
+
+<!-- Arama Çubuğu -->
+<div class="card" style="margin-bottom: 20px;">
+    <form method="GET" action="{% url 'archive_list' %}" style="padding: 20px;">
+        <div style="display: flex; gap: 15px; align-items: flex-end;">
+            <div style="flex: 1;">
+                <label for="search" style="display: block; margin-bottom: 8px; font-weight: 600; color: #2d3748;">
+                    <i class="fas fa-search"></i> Suchen
+                </label>
+                <input type="text" id="search" name="search" value="{{ search_query }}"
+                       placeholder="Datum, Titel, Kategorie oder Beschreibung..."
+                       class="form-control">
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Suchen
+                </button>
+                {% if search_query %}
+                <a href="{% url 'archive_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Zurücksetzen
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+{% if documents %}
+<table class="table">
+<thead><tr>
+<th>Datum</th>
+<th>Dokumentname</th>
+<th>Kategorie</th>
+<th>Beschreibung</th>
+<th>Erstellt</th>
+<th style="width:100px;text-align:center">Öffnen</th>
+<th style="width:100px;text-align:center">Löschen</th>
+</tr></thead>
+<tbody>
+{% for doc in documents %}
+<tr>
+<td><strong>{% if doc.document_date %}{{ doc.document_date|date:"d.m.Y" }}{% else %}{{ doc.upload_date|date:"d.m.Y" }}{% endif %}</strong></td>
+<td><i class="fas fa-file-pdf" style="color:#dc3545"></i> {{ doc.title }}</td>
+<td><span class="badge badge-{{ doc.category }}">{{ doc.get_display_category }}</span></td>
+<td>{% if doc.description %}{{ doc.description|truncatewords:10 }}{% else %}-{% endif %}</td>
+<td>{{ doc.upload_date|date:"d.m.Y H:i" }}</td>
+<td style="text-align:center">{% if doc.drive_url %}<a href="{{ doc.drive_url }}" target="_blank" class="open-btn"><i class="fas fa-external-link-alt"></i> Öffnen</a>{% endif %}</td>
+<td style="text-align:center"><a href="{% url 'archive_delete' doc.pk %}" class="delete-btn"><i class="fas fa-trash"></i> Löschen</a></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<div style="text-align:center;padding:60px 20px">
+<i class="fas fa-archive fa-3x" style="color:#e2e8f0;margin-bottom:20px"></i>
+<h3 style="color:#2d3748">Keine Dokumente gefunden</h3>
+<p style="color:#718096;margin-bottom:20px">Laden Sie Ihr erstes Dokument hoch.</p>
+<button onclick="openUploadModal()" class="btn btn-primary"><i class="fas fa-upload"></i> Dokument hochladen</button>
+</div>
+{% endif %}
+</div>
+
+<!-- Upload Modal -->
+<div id="uploadModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-upload"></i> Neues Dokument hochladen</h2>
+            <span class="close" onclick="closeUploadModal()">&times;</span>
+        </div>
+        <form method="POST" action="{% url 'archive_upload' %}" enctype="multipart/form-data" class="upload-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="title"><i class="fas fa-heading"></i> Titel *</label>
+                <input type="text" id="title" name="title" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="document_date"><i class="fas fa-calendar"></i> Dokumentdatum</label>
+                <input type="date" id="document_date" name="document_date" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="category"><i class="fas fa-tag"></i> Kategorie *</label>
+                <select id="category" name="category" class="form-control" required>
+                    {% for value, label in categories %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                    {% if custom_categories %}
+                        <optgroup label="Meine Kategorien" style="border-top:1px solid #e2e8f0">
+                        {% for custom_cat in custom_categories %}
+                            <option value="custom_{{ custom_cat }}">{{ custom_cat }}</option>
+                        {% endfor %}
+                        </optgroup>
+                    {% endif %}
+                    <option value="__new__" style="border-top:2px solid #e2e8f0;color:#17a2b8;font-weight:600">+ Neue Kategorie</option>
+                </select>
+            </div>
+            <div id="newCategoryGroup" class="form-group" style="display:none">
+                <label for="new_category_name"><i class="fas fa-plus"></i> Name der neuen Kategorie</label>
+                <input type="text" id="new_category_name" name="new_category_name" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="description"><i class="fas fa-align-left"></i> Beschreibung</label>
+                <textarea id="description" name="description" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="file"><i class="fas fa-file-pdf"></i> PDF-Datei *</label>
+                <input type="file" id="file" name="file" accept=".pdf" class="form-control" required>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> Hochladen</button>
+                <button type="button" onclick="closeUploadModal()" class="btn btn-secondary"><i class="fas fa-times"></i> Abbrechen</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openUploadModal() {
+    document.getElementById('uploadModal').style.display = 'block';
+}
+function closeUploadModal() {
+    document.getElementById('uploadModal').style.display = 'none';
+    document.querySelector('.upload-form').reset();
+    document.getElementById('newCategoryGroup').style.display = 'none';
+}
+window.onclick = function(event) {
+    if (event.target == document.getElementById('uploadModal')) {
+        closeUploadModal();
+    }
+}
+document.getElementById('category').addEventListener('change', function() {
+    document.getElementById('newCategoryGroup').style.display = this.value === '__new__' ? 'block' : 'none';
+});
+</script>
+{% endblock %}

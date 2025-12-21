@@ -2,9 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse, Http404
 from datetime import date, datetime
-from .models import Declaration, DeclarationItem, MaterialProduct, HerstellerProfile, ProductWork
+from django.db.models import Q
+from .models import Declaration, DeclarationItem, MaterialProduct, HerstellerProfile, ProductWork, ArchiveDocument
 from .forms import DeclarationItemFormSet, ProductWorkFormSet
 from .utils import generate_declaration_pdf
 
@@ -17,7 +18,11 @@ def user_login(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect('dashboard')
+            # Superuser ise admin'e yönlendir
+            if user.is_superuser:
+                return redirect('/admin/')
+            else:
+                return redirect('dashboard')
         else:
             messages.error(request, 'Ungültige Anmeldedaten')
     return render(request, 'login.html')
@@ -32,6 +37,10 @@ def user_logout(request):
 @login_required
 def dashboard(request):
     """Dashboard - Ana sayfa"""
+    # Superuser ise admin'e yönlendir
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
     total_declarations = Declaration.objects.filter(praxis=request.user).count()
     recent_declarations = Declaration.objects.filter(praxis=request.user)[:5]
 
@@ -45,6 +54,10 @@ def dashboard(request):
 @login_required
 def declaration_list(request):
     """Tüm beyanların listesi"""
+    # Superuser admin sayfasına erişemez
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
     declarations = Declaration.objects.filter(praxis=request.user)
     return render(request, 'declarations/declaration_list.html', {'declarations': declarations})
 
@@ -52,6 +65,10 @@ def declaration_list(request):
 @login_required
 def declaration_create(request):
     """Yeni beyan oluştur"""
+    # Superuser admin sayfasına erişemez
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
     if request.method == 'POST':
         # Form verilerini al
         auftragsnummer = request.POST.get('auftragsnummer')
@@ -136,6 +153,10 @@ def declaration_create(request):
 @login_required
 def declaration_detail(request, pk):
     """Beyan detay sayfası"""
+    # Superuser admin sayfasına erişemez
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
     declaration = get_object_or_404(Declaration, pk=pk, praxis=request.user)
 
     # Hersteller profile bilgisini al
@@ -153,6 +174,10 @@ def declaration_detail(request, pk):
 @login_required
 def material_products_list(request):
     """Material Products listesi - Sadece kullanıcının malzemeleri"""
+    # Superuser admin sayfasına erişemez
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
     products = MaterialProduct.objects.filter(user=request.user).order_by('name')
     return render(request, 'declarations/material_products.html', {'products': products})
 
@@ -160,6 +185,10 @@ def material_products_list(request):
 @login_required
 def material_product_create(request):
     """Yeni material product oluştur"""
+    # Superuser admin sayfasına erişemez
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
     if request.method == 'POST':
         material = request.POST.get('material')
         firma = request.POST.get('firma')
@@ -198,6 +227,10 @@ def material_product_delete(request, pk):
 @login_required
 def hersteller_profile(request):
     """Hersteller profil bilgileri"""
+    # Superuser admin sayfasına erişemez
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
     try:
         profile = request.user.hersteller_profile
     except HerstellerProfile.DoesNotExist:
@@ -231,3 +264,163 @@ def hersteller_profile(request):
         return redirect('hersteller_profile')
 
     return render(request, 'declarations/hersteller_profile.html', {'profile': profile})
+
+# ===== ARCHIV VIEWS =====
+
+@login_required
+def archive_list(request):
+    """Archiv Dokumentenliste"""
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
+    documents = ArchiveDocument.objects.filter(user=request.user).order_by('-document_date', '-upload_date')
+    
+    # Kategoriye göre filtrele
+    category = request.GET.get('category')
+    if category:
+        documents = documents.filter(category=category)
+    
+    # Arama
+    search = request.GET.get('search')
+    if search:
+        documents = documents.filter(
+            Q(title__icontains=search) |
+            Q(description__icontains=search) |
+            Q(file_name__icontains=search) |
+            Q(custom_category__icontains=search) |
+            Q(category__icontains=search)
+        )
+    
+    # Kullanıcının özel kategorilerini al
+    custom_categories = ArchiveDocument.objects.filter(
+        user=request.user,
+        custom_category__isnull=False
+    ).exclude(custom_category='').values_list('custom_category', flat=True).distinct().order_by('custom_category')
+
+    context = {
+        'documents': documents,
+        'categories': ArchiveDocument.CATEGORY_CHOICES,
+        'custom_categories': list(custom_categories),
+        'selected_category': category,
+        'search_query': search
+    }
+    
+    return render(request, 'declarations/archive/archive_list.html', context)
+
+
+@login_required
+def archive_upload(request):
+    """Archiv Dokument hochladen"""
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        description = request.POST.get('description', '')
+        category = request.POST.get('category', 'other')
+        new_category_name = request.POST.get("new_category_name", "").strip()
+        document_date_str = request.POST.get('document_date', '')
+        file = request.FILES.get('file')
+        
+        # Belge tarihini parse et
+        document_date = None
+        if document_date_str:
+            try:
+                document_date = datetime.strptime(document_date_str, '%Y-%m-%d').date()
+            except:
+                pass
+        
+        if not file:
+            messages.error(request, 'Bitte wählen Sie eine Datei aus.')
+            return redirect('archive_list')
+        
+        # PDF kontrolü
+        if not file.name.lower().endswith('.pdf'):
+            messages.error(request, 'Nur PDF-Dateien sind erlaubt.')
+            return redirect('archive_list')
+        
+
+        # Yeni veya özel kategori
+        custom_cat = None
+        if category == "__new__" and new_category_name:
+            category = "other"
+            custom_cat = new_category_name
+        elif category.startswith('custom_'):
+            # Dropdown'dan seçilen özel kategori
+            custom_cat = category.replace('custom_', '')
+            category = "other"
+
+        # Belge oluştur
+        document = ArchiveDocument.objects.create(
+            user=request.user,
+            title=title,
+            description=description,
+            category=category,
+            custom_category=custom_cat or '',
+            document_date=document_date,
+            file_name=file.name
+        )
+        
+        # Google Drive'a yükle
+        try:
+            from .utils import upload_to_drive
+            result = upload_to_drive(file, title, file.name)
+            
+            if result:
+                document.drive_file_id = result.get('id', '')
+                document.drive_url = result.get('view', '')
+                document.save()
+                messages.success(request, f'Dokument "{title}" wurde erfolgreich hochgeladen!')
+            else:
+                document.delete()
+                messages.error(request, 'Fehler beim Hochladen zu Google Drive.')
+        except Exception as e:
+            document.delete()
+            messages.error(request, f'Fehler: {str(e)}')
+            return redirect('archive_upload')
+        
+        return redirect('archive_list')
+    
+    return render(request, 'declarations/archive/archive_upload.html', {
+        'categories': ArchiveDocument.CATEGORY_CHOICES
+    })
+
+
+@login_required
+def archive_view(request, pk):
+    """Archiv Dokument anzeigen"""
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
+    document = get_object_or_404(ArchiveDocument, pk=pk, user=request.user)
+    
+    return render(request, 'declarations/archive/archive_view.html', {
+        'document': document
+    })
+
+
+@login_required
+def archive_delete(request, pk):
+    """Archiv Dokument löschen"""
+    if request.user.is_superuser:
+        return redirect('/admin/')
+    
+    document = get_object_or_404(ArchiveDocument, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        # Google Drive'dan sil
+        if document.drive_file_id:
+            try:
+                from .utils import delete_from_drive
+                delete_from_drive(document.drive_file_id)
+            except Exception as e:
+                messages.warning(request, f'Warnung: Fehler beim Löschen von Google Drive: {str(e)}')
+        
+        title = document.title
+        document.delete()
+        messages.success(request, f'Dokument "{title}" wurde gelöscht!')
+        return redirect('archive_list')
+    
+    return render(request, 'declarations/archive/archive_delete.html', {
+        'document': document
+    })

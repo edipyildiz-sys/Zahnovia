@@ -78,6 +78,7 @@
     <table class="table">
         <thead>
             <tr>
+                <th>Herstellungsdatum</th>
                 <th>Patientenname</th>
                 <th>Auftragsnummer</th>
                 <th>Nummer</th>
@@ -89,7 +90,8 @@
         <tbody>
             {% for decl in declarations %}
             <tr>
-                <td onclick="window.location='{% url 'declaration_detail' decl.pk %}'" style="cursor: pointer;"><strong>{{ decl.patient_name }}</strong></td>
+                <td onclick="window.location='{% url 'declaration_detail' decl.pk %}'" style="cursor: pointer;"><strong>{{ decl.herstellungsdatum|date:"d.m.Y" }}</strong></td>
+                <td onclick="window.location='{% url 'declaration_detail' decl.pk %}'" style="cursor: pointer;">{{ decl.patient_name }}</td>
                 <td onclick="window.location='{% url 'declaration_detail' decl.pk %}'" style="cursor: pointer;">{{ decl.auftragsnummer|default:"-" }}</td>
                 <td onclick="window.location='{% url 'declaration_detail' decl.pk %}'" style="cursor: pointer;">
                     <strong style="color: #17a2b8;">{{ decl.declaration_number }}</strong>

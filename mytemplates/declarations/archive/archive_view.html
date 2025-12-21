@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ document.title }} - Archiv{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-file-pdf"></i> {{ document.title }}</h1>
+    <div class="header-actions">
+        {% if document.drive_url %}
+            <a href="{{ document.drive_url }}" target="_blank" class="btn btn-success">
+                <i class="fab fa-google-drive"></i> In Google Drive öffnen
+            </a>
+        {% endif %}
+        <a href="{% url 'archive_delete' document.pk %}" class="btn btn-danger">
+            <i class="fas fa-trash"></i> Löschen
+        </a>
+        <a href="{% url 'archive_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Zurück
+        </a>
+    </div>
+</div>
+
+<div class="content-box">
+    <div class="document-details">
+        <div class="detail-row">
+            <div class="detail-item">
+                <label><i class="fas fa-tag"></i> Kategorie</label>
+                <span class="badge badge-{{ document.category }}">
+                    {{ document.get_category_display }}
+                </span>
+            </div>
+
+            <div class="detail-item">
+                <label><i class="fas fa-file"></i> Dateiname</label>
+                <span>{{ document.file_name }}</span>
+            </div>
+
+            <div class="detail-item">
+                <label><i class="fas fa-calendar"></i> Hochgeladen</label>
+                <span>{{ document.upload_date|date:"d.m.Y H:i" }} Uhr</span>
+            </div>
+        </div>
+
+        {% if document.description %}
+        <div class="detail-section">
+            <label><i class="fas fa-align-left"></i> Beschreibung</label>
+            <div class="description-box">
+                {{ document.description|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if document.drive_url %}
+        <div class="detail-section">
+            <label><i class="fab fa-google-drive"></i> Google Drive</label>
+            <div class="drive-info">
+                <i class="fab fa-google-drive fa-2x"></i>
+                <div>
+                    <p>Dieses Dokument ist in Google Drive gespeichert</p>
+                    <a href="{{ document.drive_url }}" target="_blank" class="drive-link">
+                        <i class="fas fa-external-link-alt"></i> Im neuen Tab öffnen
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="pdf-preview">
+            <iframe src="{{ document.drive_url }}" width="100%" height="800" frameborder="0"></iframe>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.document-details {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.detail-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-item label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray);
+    margin-bottom: 8px;
+}
+
+.detail-item label i {
+    margin-right: 6px;
+}
+
+.detail-item span {
+    display: block;
+    font-size: 16px;
+    color: var(--dark-gray);
+}
+
+.detail-section {
+    margin-bottom: 30px;
+}
+
+.detail-section label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dark-gray);
+    margin-bottom: 12px;
+}
+
+.detail-section label i {
+    margin-right: 8px;
+    color: var(--primary);
+}
+
+.description-box {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 6px;
+    border-left: 4px solid var(--primary);
+    color: var(--dark-gray);
+    line-height: 1.6;
+}
+
+.drive-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: #f0f9ff;
+    border-radius: 8px;
+    border: 1px solid #bae6fd;
+}
+
+.drive-info i.fa-google-drive {
+    color: #4285f4;
+}
+
+.drive-info p {
+    margin: 0 0 8px 0;
+    color: var(--dark-gray);
+}
+
+.drive-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.drive-link:hover {
+    text-decoration: underline;
+}
+
+.pdf-preview {
+    margin-top: 30px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.badge-invoice { background: #e3f2fd; color: #1976d2; }
+.badge-declaration { background: #f3e5f5; color: #7b1fa2; }
+.badge-certificate { background: #e8f5e9; color: #388e3c; }
+.badge-contract { background: #fff3e0; color: #f57c00; }
+.badge-other { background: #eceff1; color: #546e7a; }
+</style>
+{% endblock %}

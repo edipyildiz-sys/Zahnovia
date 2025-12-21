@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block title %}Dokument löschen - Archiv{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-trash"></i> Dokument löschen</h1>
+    <a href="{% url 'archive_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Zurück
+    </a>
+</div>
+
+<div class="content-box">
+    <div class="delete-confirmation">
+        <div class="warning-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+
+        <h2>Dokument wirklich löschen?</h2>
+
+        <div class="document-info">
+            <div class="info-item">
+                <label>Titel:</label>
+                <span>{{ document.title }}</span>
+            </div>
+
+            <div class="info-item">
+                <label>Kategorie:</label>
+                <span class="badge badge-{{ document.category }}">
+                    {{ document.get_category_display }}
+                </span>
+            </div>
+
+            <div class="info-item">
+                <label>Dateiname:</label>
+                <span>{{ document.file_name }}</span>
+            </div>
+
+            <div class="info-item">
+                <label>Hochgeladen:</label>
+                <span>{{ document.upload_date|date:"d.m.Y H:i" }} Uhr</span>
+            </div>
+        </div>
+
+        <div class="warning-message">
+            <i class="fas fa-info-circle"></i>
+            <strong>Achtung:</strong> Diese Aktion kann nicht rückgängig gemacht werden.
+            Das Dokument wird sowohl aus der Datenbank als auch aus Google Drive gelöscht.
+        </div>
+
+        <form method="POST" class="delete-form">
+            {% csrf_token %}
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger btn-lg">
+                    <i class="fas fa-trash"></i> Ja, löschen
+                </button>
+                <a href="{% url 'archive_view' document.pk %}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-times"></i> Abbrechen
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.delete-confirmation {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.warning-icon {
+    margin-bottom: 20px;
+}
+
+.warning-icon i {
+    font-size: 64px;
+    color: #dc3545;
+}
+
+.delete-confirmation h2 {
+    color: var(--dark-gray);
+    margin-bottom: 30px;
+}
+
+.document-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 25px;
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: var(--gray);
+}
+
+.info-item span {
+    color: var(--dark-gray);
+}
+
+.warning-message {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 30px;
+    text-align: left;
+    color: #856404;
+}
+
+.warning-message i {
+    margin-right: 8px;
+    color: #ffc107;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.btn-lg {
+    padding: 14px 32px;
+    font-size: 16px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-invoice { background: #e3f2fd; color: #1976d2; }
+.badge-declaration { background: #f3e5f5; color: #7b1fa2; }
+.badge-certificate { background: #e8f5e9; color: #388e3c; }
+.badge-contract { background: #fff3e0; color: #f57c00; }
+.badge-other { background: #eceff1; color: #546e7a; }
+</style>
+{% endblock %}

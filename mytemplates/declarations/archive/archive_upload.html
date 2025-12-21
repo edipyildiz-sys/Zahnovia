@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Dokument hochladen - Archiv{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-upload"></i> Neues Dokument hochladen</h1>
+    <a href="{% url 'archive_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Zurück zur Liste
+    </a>
+</div>
+
+<div class="content-box">
+    <form method="POST" enctype="multipart/form-data" class="upload-form">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="title"><i class="fas fa-heading"></i> Titel *</label>
+            <input type="text" id="title" name="title" class="form-control" required>
+            <small class="form-text">Geben Sie einen aussagekräftigen Titel für das Dokument ein</small>
+        </div>
+
+        <div class="form-group">
+            <label for="category"><i class="fas fa-tag"></i> Kategorie *</label>
+            <select id="category" name="category" class="form-control" required>
+                {% for value, label in categories %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="description"><i class="fas fa-align-left"></i> Beschreibung</label>
+            <textarea id="description" name="description" class="form-control" rows="4" placeholder="Optional: Zusätzliche Informationen zum Dokument"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="file"><i class="fas fa-file-pdf"></i> PDF-Datei *</label>
+            <div class="file-input-wrapper">
+                <input type="file" id="file" name="file" accept=".pdf" required>
+                <div class="file-info">
+                    <i class="fas fa-cloud-upload-alt fa-3x"></i>
+                    <p>PDF-Datei auswählen oder hierher ziehen</p>
+                    <small>Nur PDF-Dateien sind erlaubt</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-upload"></i> Hochladen
+            </button>
+            <a href="{% url 'archive_list' %}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-times"></i> Abbrechen
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+.upload-form {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--dark-gray);
+}
+
+.form-group label i {
+    margin-right: 8px;
+    color: var(--primary);
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.1);
+}
+
+.form-text {
+    display: block;
+    margin-top: 5px;
+    font-size: 13px;
+    color: var(--gray);
+}
+
+.file-input-wrapper {
+    position: relative;
+    border: 2px dashed #e2e8f0;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.file-input-wrapper:hover {
+    border-color: var(--primary);
+    background: #f8f9fa;
+}
+
+.file-input-wrapper input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-info {
+    pointer-events: none;
+}
+
+.file-info i {
+    color: var(--primary);
+    margin-bottom: 15px;
+}
+
+.file-info p {
+    font-size: 16px;
+    color: var(--dark-gray);
+    margin-bottom: 5px;
+}
+
+.file-info small {
+    color: var(--gray);
+    font-size: 13px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.btn-lg {
+    padding: 14px 32px;
+    font-size: 16px;
+}
+</style>
+
+<script>
+// Dateiname anzeigen wenn Datei ausgewählt
+document.getElementById('file').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name;
+    if (fileName) {
+        const fileInfo = document.querySelector('.file-info p');
+        fileInfo.innerHTML = '<i class="fas fa-file-pdf"></i> ' + fileName;
+        fileInfo.style.color = 'var(--primary)';
+    }
+});
+
+// Drag & Drop Support
+const fileWrapper = document.querySelector('.file-input-wrapper');
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    fileWrapper.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    fileWrapper.addEventListener(eventName, () => {
+        fileWrapper.style.borderColor = 'var(--primary)';
+        fileWrapper.style.background = '#f0f9ff';
+    });
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    fileWrapper.addEventListener(eventName, () => {
+        fileWrapper.style.borderColor = '#e2e8f0';
+        fileWrapper.style.background = '';
+    });
+});
+
+fileWrapper.addEventListener('drop', function(e) {
+    const files = e.dataTransfer.files;
+    document.getElementById('file').files = files;
+    if (files[0]) {
+        const fileInfo = document.querySelector('.file-info p');
+        fileInfo.innerHTML = '<i class="fas fa-file-pdf"></i> ' + files[0].name;
+        fileInfo.style.color = 'var(--primary)';
+    }
+});
+</script>
+{% endblock %}

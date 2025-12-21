@@ -24,9 +24,15 @@
                         {% csrf_token %}
 
                         <div class="mb-3">
-                            <label for="id_firma_name" class="form-label">Firma Adı *</label>
+                            <label for="id_firma_name" class="form-label">Praxis Name *</label>
                             <input type="text" class="form-control" id="id_firma_name" name="firma_name"
                                    value="{{ profile.firma_name|default:'' }}" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_verordnender_arzt" class="form-label">Verordnender Arzt</label>
+                            <input type="text" class="form-control" id="id_verordnender_arzt" name="verordnender_arzt"
+                                   value="{{ profile.verordnender_arzt|default:'' }}">
                         </div>
 
                         <div class="mb-3">
@@ -64,17 +70,13 @@
                                    value="{{ profile.email|default:'' }}" required>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="id_verordnender_arzt" class="form-label">Verordnender Arzt</label>
-                            <input type="text" class="form-control" id="id_verordnender_arzt" name="verordnender_arzt"
-                                   value="{{ profile.verordnender_arzt|default:'' }}">
-                        </div>
+
 
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary">
-                                {% if profile %}Güncelle{% else %}Kaydet{% endif %}
+                                {% if profile %}Aktualisieren{% else %}Speichern{% endif %}
                             </button>
-                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">İptal</a>
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Abbrechen</a>
                         </div>
                     </form>
                 </div>

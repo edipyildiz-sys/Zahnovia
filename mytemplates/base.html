@@ -28,6 +28,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: var(--bg-light);
             overflow-x: hidden;
+            font-size: 14px;
         }
 
         /* HEADER */
@@ -309,7 +310,7 @@
         <div class="header-title">
             <i class="fas fa-tooth"></i> Zahnovia
         </div>
-        {% if user.is_authenticated %}
+        {% if user.is_authenticated and not user.is_superuser %}
         <div class="user-info" id="userInfoBtn">
             <div class="user-avatar">{{ user.username.0|upper }}</div>
             <span>{{ user.username }}</span>
@@ -328,7 +329,7 @@
         {% endif %}
     </div>
 
-    {% if user.is_authenticated %}
+    {% if user.is_authenticated and not user.is_superuser %}
     <!-- SIDEBAR -->
     <div class="sidebar">
         <ul class="sidebar-menu">
@@ -348,6 +349,12 @@
                 <a href="{% url 'material_products_list' %}" class="{% if request.resolver_match.url_name == 'material_products_list' or request.resolver_match.url_name == 'material_product_create' %}active{% endif %}">
                     <i class="fas fa-boxes"></i>
                     <span>Produkt Materials</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'archive_list' %}" class="{% if 'archive' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="fas fa-archive"></i>
+                    <span>Digitales Archiv</span>
                 </a>
             </li>
         </ul>
