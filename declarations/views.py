@@ -134,8 +134,8 @@ def declaration_create(request):
         product_work_formset = ProductWorkFormSet(instance=declaration, prefix='product_works')
         material_formset = DeclarationItemFormSet(instance=declaration, prefix='materials')
 
-    # MaterialProduct'ları ve Hersteller Profile'ı gönder
-    material_products = MaterialProduct.objects.filter(is_active=True)
+    # MaterialProduct'ları ve Hersteller Profile'ı gönder (sadece kullanıcının kendi ürünleri)
+    material_products = MaterialProduct.objects.filter(user=request.user, is_active=True)
 
     try:
         hersteller_profile = request.user.hersteller_profile
