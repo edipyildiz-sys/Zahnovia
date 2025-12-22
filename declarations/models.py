@@ -35,7 +35,7 @@ class Declaration(models.Model):
     """Konformitätserklärung (Uygunluk Beyanı)"""
 
     praxis = models.ForeignKey(User, on_delete=models.CASCADE, related_name='declarations')
-    declaration_number = models.CharField(max_length=50, unique=True, blank=True)
+    declaration_number = models.CharField(max_length=50, blank=True)
 
     # Hasta ve Üretim Bilgileri
     auftragsnummer = models.CharField(max_length=100, verbose_name="Auftragsnummer", blank=True)
@@ -52,16 +52,21 @@ class Declaration(models.Model):
         ordering = ['-created_at']
         verbose_name = 'Konformitätserklärung'
         verbose_name_plural = 'Konformitätserklärungen'
+        unique_together = [['praxis', 'declaration_number']]
 
     def __str__(self):
         return f"{self.declaration_number or 'Draft'} - {self.praxis.username}"
 
     def save(self, *args, **kwargs):
         if not self.declaration_number:
-            # Otomatik numara üretimi: DECL-YYYY-NNNN
+            # Otomatik numara üretimi: Her kullanıcı için ayrı sıralama
+            # Format: DECL-YYYY-NNNN (kullanıcı bazında)
             from datetime import datetime
             year = datetime.now().year
+
+            # Sadece bu kullanıcının bu yıla ait son declaration'ını bul
             last_decl = Declaration.objects.filter(
+                praxis=self.praxis,
                 declaration_number__startswith=f'DECL-{year}'
             ).order_by('-declaration_number').first()
 
