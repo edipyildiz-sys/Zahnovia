@@ -103,10 +103,24 @@ def declaration_create(request):
 
         if product_work_formset.is_valid() and material_formset.is_valid():
             # Product works'leri kaydet
-            product_works = product_work_formset.save(commit=False)
-            for i, pw in enumerate(product_works, start=1):
-                pw.line_number = i
-                pw.save()
+            saved_count = 0
+            for form in product_work_formset.forms:
+                # DELETE checkbox işaretliyse atla
+                if form.cleaned_data.get('DELETE'):
+                    continue
+
+                # Form'dan veriyi al
+                data = form.cleaned_data
+                if data.get('produktbezeichnung_arbeit'):  # En azından produktbezeichnung olmalı
+                    pw = ProductWork(
+                        declaration=declaration,
+                        line_number=saved_count + 1,
+                        produktbezeichnung_arbeit=data.get('produktbezeichnung_arbeit', ''),
+                        zahnnummer=data.get('zahnnummer', ''),
+                        zahnfarbe=data.get('zahnfarbe', '')
+                    )
+                    pw.save()
+                    saved_count += 1
 
             # Önce tüm material ve firma değerlerini POST'tan al (hidden field'lar)
             material_data = {}
@@ -226,13 +240,46 @@ def declaration_edit(request, pk):
         material_formset = DeclarationItemFormSet(request.POST, instance=declaration, prefix='materials', user=request.user)
 
         if product_work_formset.is_valid() and material_formset.is_valid():
+            # Önce product work verilerini POST'tan al
+            product_work_data = {}
+            for key in request.POST.keys():
+                if key.startswith('product_works-'):
+                    try:
+                        parts = key.split('-')
+                        if len(parts) == 3:
+                            index = int(parts[1])
+                            field = parts[2]
+                            value = request.POST.get(key, '').strip()
+
+                            if index not in product_work_data:
+                                product_work_data[index] = {}
+
+                            product_work_data[index][field] = value
+                    except (ValueError, IndexError):
+                        continue
+
             # Mevcut product works'leri sil
             declaration.product_works.all().delete()
+
             # Yeni product works'leri kaydet
-            product_works = product_work_formset.save(commit=False)
-            for i, pw in enumerate(product_works, start=1):
-                pw.line_number = i
-                pw.save()
+            saved_count = 0
+            for form_index, form in enumerate(product_work_formset.forms):
+                # DELETE checkbox işaretliyse atla
+                if form.cleaned_data.get('DELETE'):
+                    continue
+
+                # Form'dan veriyi al
+                data = form.cleaned_data
+                if data.get('produktbezeichnung_arbeit'):  # En azından produktbezeichnung olmalı
+                    pw = ProductWork(
+                        declaration=declaration,
+                        line_number=saved_count + 1,
+                        produktbezeichnung_arbeit=data.get('produktbezeichnung_arbeit', ''),
+                        zahnnummer=data.get('zahnnummer', ''),
+                        zahnfarbe=data.get('zahnfarbe', '')
+                    )
+                    pw.save()
+                    saved_count += 1
 
             # Mevcut materials'ı sil
             declaration.items.all().delete()

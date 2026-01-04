@@ -82,6 +82,7 @@
             {% for form in product_work_formset %}
             <div class="product-work-row" data-row-index="{{ forloop.counter0 }}">
                 {{ form.id }}
+                <!-- Debug: {{ form.instance.produktbezeichnung_arbeit }} -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 60px; gap: 10px; margin-bottom: 15px; align-items: end;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label class="form-label">Produktbezeichnung / Arbeit *</label>
