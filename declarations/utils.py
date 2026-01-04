@@ -222,6 +222,20 @@ def parse_declaration_pdf(pdf_file):
         for page in pdf_reader.pages:
             text += page.extract_text()
 
+        # Unicode karakterleri temizle
+        text = text.replace('\u200b', '')  # Zero-width space
+        text = text.replace('\ufeff', '')  # BOM
+
+        # Debug: PDF'den çıkan metni logla
+        try:
+            print("=" * 80)
+            print("DEBUG: PDF TEXT CONTENT")
+            print("=" * 80)
+            print(text.encode('utf-8', errors='replace').decode('utf-8'))
+            print("=" * 80)
+        except Exception as e:
+            print(f"Debug print error: {e}")
+
         # Veriyi parse et
         parsed_data = {
             'auftragsnummer': '',
@@ -231,24 +245,44 @@ def parse_declaration_pdf(pdf_file):
             'materials': []
         }
 
-        # Auftragsnummer çıkar
+        # Auftragsnummer çıkar (sadece standart format varsa)
+        # Dentsply PDF'de Auftragsnummer yok, kullanıcı manuel girecek
         auftrag_match = re.search(r'Auftragsnummer[:\s]+([A-Z0-9-]+)', text, re.IGNORECASE)
         if auftrag_match:
             parsed_data['auftragsnummer'] = auftrag_match.group(1).strip()
 
         # Patient name çıkar
-        patient_match = re.search(r'Patient(?:enname)?[:\s]+([^\n]+)', text, re.IGNORECASE)
-        if patient_match:
-            parsed_data['patient_name'] = patient_match.group(1).strip()
+        # Dentsply gerçek format: "1Sanli,Seda Fischer,Christine Unknown Krone 24 Hoch"
+        # Boşluklarla ayrılmış: ID Zahnarzt Patient Techniker Elementtyp Zahnnummer Produktion
+        # Virgülden sonra boşluk YOK: "Fischer,Christine"
+        patient_table_match = re.search(r'\d+[A-Za-zäöüßÄÖÜ]+,[A-Za-zäöüßÄÖÜ]+\s+([A-Za-zäöüßÄÖÜ]+),([A-Za-zäöüßÄÖÜ]+)\s+', text)
+        if patient_table_match:
+            # Virgülden sonra boşluk ekle
+            parsed_data['patient_name'] = f"{patient_table_match.group(1)}, {patient_table_match.group(2)}"
+        else:
+            # Standart format: "Patientenname: Fischer, Christine"
+            patient_match = re.search(r'Patient(?:enname)?[:\s]+([^\n]+)', text, re.IGNORECASE)
+            if patient_match:
+                parsed_data['patient_name'] = patient_match.group(1).strip()
 
-        # Herstellungsdatum çıkar (DD.MM.YYYY formatında olabilir)
-        date_match = re.search(r'Herstellungsdatum[:\s]+(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})', text, re.IGNORECASE)
+        # Herstellungsdatum çıkar
+        # Dentsply'de: "Erstellungsdatum: 01.01.2026 22:27:05" → Zahnovia'da "Herstellungsdatum"
+        date_match = re.search(r'Erstellungsdatum[:\s]+(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})', text, re.IGNORECASE)
         if date_match:
             day, month, year = date_match.groups()
             parsed_data['herstellungsdatum'] = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+        else:
+            # Alternatif: standart "Herstellungsdatum" formatı
+            date_match2 = re.search(r'Herstellungsdatum[:\s]+(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})', text, re.IGNORECASE)
+            if date_match2:
+                day, month, year = date_match2.groups()
+                parsed_data['herstellungsdatum'] = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
 
         # Produktbezeichnung/Arbeit tablosunu çıkar
-        # Format: "Produktbezeichnung/Arbeit | Zahnnummer | Zahnfarbe"
+        # Dentsply Format: Tabloda "Elementtyp | Zahnnummer"
+        # Zahnovia'da: "Produktbezeichnung / Arbeit | Zahnnummer | Zahnfarbe"
+
+        # Format 1: Standart table format
         product_pattern = r'([^\|]+)\s*\|\s*(\d+[,\s]*\d*)\s*\|\s*([A-Z0-9]+)'
         product_matches = re.findall(product_pattern, text)
 
@@ -260,38 +294,96 @@ def parse_declaration_pdf(pdf_file):
                     'zahnfarbe': match[2].strip()
                 })
 
+        # Format 2: Dentsply Sirona tablosu
+        # Gerçek format: "1Sanli,Seda Fischer,Christine Unknown Krone 24 Hoch"
+        # Boşluklarla ayrılmış: ID Zahnarzt Patient Techniker Elementtyp Zahnnummer Produktion
+        if not parsed_data['product_works']:
+            # Pattern: ID Zahnarzt Patient Techniker Elementtyp Zahnnummer
+            # Virgülden sonra boşluk olmayabilir: "Fischer,Christine" (boşluksuz)
+            table_row_pattern = r'\d+[A-Za-zäöüßÄÖÜ]+,[A-Za-zäöüßÄÖÜ]+\s+[A-Za-zäöüßÄÖÜ]+,[A-Za-zäöüßÄÖÜ]+\s+[A-Za-zäöüßÄÖÜ]+\s+([A-Za-zäöüßÄÖÜ]+(?:\s+[A-Za-zäöüßÄÖÜ]+)*)\s+(\d+)'
+            table_match = re.search(table_row_pattern, text)
+
+            if table_match:
+                elementtyp = table_match.group(1).strip()
+                zahnnummer = table_match.group(2).strip()
+
+                parsed_data['product_works'].append({
+                    'produktbezeichnung_arbeit': elementtyp,  # Krone, Brücke, etc.
+                    'zahnnummer': zahnnummer,  # 24, etc.
+                    'zahnfarbe': ''  # Dentsply'de zahnfarbe yok
+                })
+
         # Materialien tablosunu çıkar
-        # Daha genel bir yaklaşım: CE işareti, firma isimleri vb. ara
-        material_lines = text.split('\n')
+        # Dentsply Format:
+        #   Werkstückname: CERECMTLZirconia
+        #   20260101-222705  <- Bu LOT NO (Material Lot No)
+        #   Hersteller: DentsplySirona
+        #   Materialname: CERECMTLZirconia
 
-        for i, line in enumerate(material_lines):
-            # CE işareti içeren satırları ara
-            if 'CE' in line or 'Lot' in line:
-                # Material bilgisini parse et
-                parts = re.split(r'\s{2,}|\t', line)  # 2+ boşluk veya tab ile böl
-                if len(parts) >= 3:
-                    material_data = {
-                        'material': '',
-                        'firma': '',
-                        'bestandteile': '',
-                        'material_lot_no': '',
-                        'ce_status': 'yes' if 'CE' in line else 'no'
-                    }
+        # Material LOT NO çıkar
+        # Format: "20260101-222705" -> Sadece son 6 hane: "222705"
+        lot_no_match = re.search(r'\d{8}-(\d{6})', text)
+        material_lot_no = lot_no_match.group(1).strip() if lot_no_match else ''
 
-                    # İlk kısım genelde material
-                    material_data['material'] = parts[0].strip()
+        # Materialname ve Hersteller (boşluksuz format)
+        materialname_match = re.search(r'Materialname[:\s]*([A-Za-z0-9]+)', text, re.IGNORECASE)
+        hersteller_match = re.search(r'Hersteller[:\s]*([A-Za-z]+)', text, re.IGNORECASE)
 
-                    # Firma ve diğer bilgileri çıkarmaya çalış
-                    for part in parts[1:]:
-                        if 'Lot' in part or 'LOT' in part:
-                            lot_match = re.search(r'(?:Lot|LOT)[:\s]*([A-Z0-9-]+)', part)
-                            if lot_match:
-                                material_data['material_lot_no'] = lot_match.group(1)
-                        elif len(part) > 2 and material_data['firma'] == '':
-                            material_data['firma'] = part.strip()
+        if materialname_match:
+            # Material adını düzenle: "CERECMTLZirconia" → "CEREC MTL Zirconia"
+            material_name = materialname_match.group(1).strip()
+            # CEREC, MTL, Zirconia gibi kelimeleri ayır
+            material_name = re.sub(r'([A-Z][a-z]+)', r' \1', material_name).strip()
+            material_name = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', material_name).strip()
 
-                    if material_data['material']:
-                        parsed_data['materials'].append(material_data)
+            # Hersteller adını düzenle: "DentsplySirona" → "Dentsply Sirona"
+            firma_name = 'Dentsply Sirona'
+            if hersteller_match:
+                firma_raw = hersteller_match.group(1).strip()
+                # DentsplySirona → Dentsply Sirona
+                firma_name = re.sub(r'([a-z])([A-Z])', r'\1 \2', firma_raw)
+
+            material_data = {
+                'material': material_name,
+                'firma': firma_name,
+                'bestandteile': '',
+                'material_lot_no': material_lot_no,
+                'ce_status': 'yes'
+            }
+            parsed_data['materials'].append(material_data)
+
+        # Format 2: CE işareti, firma isimleri vb. ara (eski format)
+        if not parsed_data['materials']:
+            material_lines = text.split('\n')
+
+            for i, line in enumerate(material_lines):
+                # CE işareti içeren satırları ara
+                if 'CE' in line or 'Lot' in line or 'Zirconi' in line:
+                    # Material bilgisini parse et
+                    parts = re.split(r'\s{2,}|\t', line)  # 2+ boşluk veya tab ile böl
+                    if len(parts) >= 1:
+                        material_data = {
+                            'material': '',
+                            'firma': '',
+                            'bestandteile': '',
+                            'material_lot_no': '',
+                            'ce_status': 'yes' if 'CE' in line else 'no'
+                        }
+
+                        # İlk kısım genelde material
+                        material_data['material'] = parts[0].strip()
+
+                        # Firma ve diğer bilgileri çıkarmaya çalış
+                        for part in parts[1:]:
+                            if 'Lot' in part or 'LOT' in part:
+                                lot_match = re.search(r'(?:Lot|LOT)[:\s]*([A-Z0-9-]+)', part)
+                                if lot_match:
+                                    material_data['material_lot_no'] = lot_match.group(1)
+                            elif len(part) > 2 and material_data['firma'] == '':
+                                material_data['firma'] = part.strip()
+
+                        if material_data['material']:
+                            parsed_data['materials'].append(material_data)
 
         return parsed_data
 

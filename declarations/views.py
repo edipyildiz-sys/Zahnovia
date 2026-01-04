@@ -98,7 +98,7 @@ def declaration_create(request):
 
         # Form verilerini işle
         product_work_formset = ProductWorkFormSet(request.POST, instance=declaration, prefix='product_works')
-        material_formset = DeclarationItemFormSet(request.POST, instance=declaration, prefix='materials')
+        material_formset = DeclarationItemFormSet(request.POST, instance=declaration, prefix='materials', user=request.user)
 
         if product_work_formset.is_valid() and material_formset.is_valid():
             # Product works'leri kaydet
@@ -128,12 +128,23 @@ def declaration_create(request):
             return redirect('declaration_detail', pk=declaration.pk)
         else:
             declaration.delete()  # Hata varsa declaration'ı sil
+
+            # Debug: Form hatalarını göster
+            print("=" * 80)
+            print("FORM VALIDATION ERRORS:")
+            print("=" * 80)
+            print("Product Work Formset Valid:", product_work_formset.is_valid())
+            print("Product Work Errors:", product_work_formset.errors)
+            print("Material Formset Valid:", material_formset.is_valid())
+            print("Material Errors:", material_formset.errors)
+            print("=" * 80)
+
             messages.error(request, 'Formda hatalar var, lütfen kontrol edin.')
     else:
         # Boş bir declaration oluştur (geçici)
         declaration = Declaration(praxis=request.user)
         product_work_formset = ProductWorkFormSet(instance=declaration, prefix='product_works')
-        material_formset = DeclarationItemFormSet(instance=declaration, prefix='materials')
+        material_formset = DeclarationItemFormSet(instance=declaration, prefix='materials', user=request.user)
 
     # MaterialProduct'ları ve Hersteller Profile'ı gönder (sadece kullanıcının kendi ürünleri)
     material_products = MaterialProduct.objects.filter(user=request.user, is_active=True)
@@ -448,5 +459,16 @@ def parse_reference_pdf(request):
     # Hata kontrolü
     if 'error' in parsed_data:
         return JsonResponse({'error': parsed_data['error']}, status=400)
+
+    # Debug: Print parsed data
+    print("=" * 80)
+    print("DEBUG: PARSED DATA TO RETURN")
+    print("=" * 80)
+    print(f"Auftragsnummer: {parsed_data.get('auftragsnummer')}")
+    print(f"Patient Name: {parsed_data.get('patient_name')}")
+    print(f"Herstellungsdatum: {parsed_data.get('herstellungsdatum')}")
+    print(f"Product Works: {parsed_data.get('product_works')}")
+    print(f"Materials: {parsed_data.get('materials')}")
+    print("=" * 80)
 
     return JsonResponse(parsed_data)

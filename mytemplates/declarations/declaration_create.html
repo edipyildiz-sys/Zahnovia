@@ -120,14 +120,12 @@
             {% for form in material_formset %}
             <div class="material-row" data-row-index="{{ forloop.counter0 }}">
                 {{ form.id }}
-                <div style="display: grid; grid-template-columns: 200px 200px 1fr 150px 80px 60px; gap: 10px; margin-bottom: 15px; align-items: end;">
+                {{ form.material }}
+                {{ form.firma }}
+                <div style="display: grid; grid-template-columns: 300px 1fr 150px 80px 60px; gap: 10px; margin-bottom: 15px; align-items: end;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Material *</label>
-                        {{ form.material }}
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Hersteller *</label>
-                        {{ form.firma }}
+                        <label class="form-label">Material Product *</label>
+                        {{ form.material_product }}
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label class="form-label">Bestandteile</label>
@@ -180,70 +178,41 @@ const materialProducts = [
     {% endfor %}
 ];
 
-// Benzersiz material ve firma değerlerini çıkar
-const uniqueMaterials = [...new Set(materialProducts.map(p => p.material))].sort();
-const uniqueFirmas = [...new Set(materialProducts.map(p => p.firma))].sort();
-
-// Dropdown'ları doldur
-function populateDropdowns() {
-    document.querySelectorAll('.material-select').forEach(select => {
-        if (select.options.length <= 1) {  // Sadece boşsa doldur
-            select.innerHTML = '<option value="">--- Wählen Sie ---</option>';
-            uniqueMaterials.forEach(material => {
-                const option = document.createElement('option');
-                option.value = material;
-                option.textContent = material;
-                select.appendChild(option);
-            });
-        }
-    });
-
-    document.querySelectorAll('.firma-select').forEach(select => {
-        if (select.options.length <= 1) {  // Sadece boşsa doldur
-            select.innerHTML = '<option value="">--- Wählen Sie ---</option>';
-            uniqueFirmas.forEach(firma => {
-                const option = document.createElement('option');
-                option.value = firma;
-                option.textContent = firma;
-                select.appendChild(option);
-            });
-        }
-    });
-}
-
-// Material veya Firma değiştiğinde Bestandteile'yi otomatik doldur
+// Material Product seçildiğinde hidden field'ları ve bestandteile'yi doldur
 function attachChangeHandlers() {
     document.querySelectorAll('.material-row').forEach(row => {
-        const materialSelect = row.querySelector('.material-select');
-        const firmaSelect = row.querySelector('.firma-select');
+        const materialProductSelect = row.querySelector('.material-product-select');
+        const materialInput = row.querySelector('.material-input');
+        const firmaInput = row.querySelector('.firma-input');
         const bestandteileInput = row.querySelector('.bestandteile-input');
 
-        function updateBestandteile() {
-            const material = materialSelect.value;
-            const firma = firmaSelect.value;
+        if (materialProductSelect) {
+            materialProductSelect.addEventListener('change', function() {
+                const productId = parseInt(this.value);
 
-            if (material && firma) {
-                // Matching product bul
-                const matchingProduct = materialProducts.find(p =>
-                    p.material === material && p.firma === firma
-                );
+                if (productId) {
+                    // Seçilen ürünü bul
+                    const selectedProduct = materialProducts.find(p => p.id === productId);
 
-                if (matchingProduct) {
-                    bestandteileInput.value = matchingProduct.bestandteile;
+                    if (selectedProduct) {
+                        // Hidden field'ları doldur
+                        materialInput.value = selectedProduct.material;
+                        firmaInput.value = selectedProduct.firma;
+                        bestandteileInput.value = selectedProduct.bestandteile;
+                    }
                 } else {
-                    // Eşleşme yoksa boş bırak
+                    // Seçim kaldırıldıysa temizle
+                    materialInput.value = '';
+                    firmaInput.value = '';
                     bestandteileInput.value = '';
                 }
-            }
+            });
         }
-
-        materialSelect.addEventListener('change', updateBestandteile);
-        firmaSelect.addEventListener('change', updateBestandteile);
     });
 }
 
-// Product Work - Zeile hinzufügen butonu
-document.getElementById('add-product-work-btn').addEventListener('click', function() {
+// Product Work row ekleme fonksiyonu
+function addProductWorkRow() {
     const container = document.getElementById('product-work-container');
     const totalFormsInput = document.querySelector('#id_product_works-TOTAL_FORMS');
     const currentTotal = parseInt(totalFormsInput.value);
@@ -279,10 +248,13 @@ document.getElementById('add-product-work-btn').addEventListener('click', functi
 
     // Total forms sayısını artır
     totalFormsInput.value = currentTotal + 1;
-});
+}
 
-// Material - Zeile hinzufügen butonu
-document.getElementById('add-material-btn').addEventListener('click', function() {
+// Product Work - Zeile hinzufügen butonu
+document.getElementById('add-product-work-btn').addEventListener('click', addProductWorkRow);
+
+// Material row ekleme fonksiyonu
+function addMaterialRow() {
     const container = document.getElementById('material-container');
     const totalFormsInput = document.querySelector('#id_materials-TOTAL_FORMS');
     const currentTotal = parseInt(totalFormsInput.value);
@@ -319,14 +291,15 @@ document.getElementById('add-material-btn').addEventListener('click', function()
     // Total forms sayısını artır
     totalFormsInput.value = currentTotal + 1;
 
-    // Dropdown'ları yeniden doldur ve event handler'ları ekle
-    populateDropdowns();
+    // Event handler'ları ekle
     attachChangeHandlers();
-});
+}
+
+// Material - Zeile hinzufügen butonu
+document.getElementById('add-material-btn').addEventListener('click', addMaterialRow);
 
 // Sayfa yüklendiğinde
 document.addEventListener('DOMContentLoaded', function() {
-    populateDropdowns();
     attachChangeHandlers();
 
     // CE status field'larına default "Ja" değerini set et
@@ -376,6 +349,18 @@ function uploadReferencePdf() {
     })
     .then(response => response.json())
     .then(data => {
+        // Debug: Log received data
+        console.log('==========================================');
+        console.log('DEBUG: RECEIVED DATA FROM API');
+        console.log('==========================================');
+        console.log('Full data:', data);
+        console.log('Auftragsnummer:', data.auftragsnummer);
+        console.log('Patient Name:', data.patient_name);
+        console.log('Herstellungsdatum:', data.herstellungsdatum);
+        console.log('Product Works:', data.product_works);
+        console.log('Materials:', data.materials);
+        console.log('==========================================');
+
         if (data.error) {
             statusDiv.innerHTML = '<p style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> ' + data.error + '</p>';
             return;
@@ -397,34 +382,52 @@ function uploadReferencePdf() {
 }
 
 function fillFormWithParsedData(data) {
+    console.log('DEBUG: Starting fillFormWithParsedData');
+
     // Patienteninformationen doldur
     if (data.auftragsnummer) {
-        document.querySelector('input[name="auftragsnummer"]').value = data.auftragsnummer;
+        const auftragsField = document.querySelector('input[name="auftragsnummer"]');
+        console.log('Auftragsnummer field:', auftragsField);
+        if (auftragsField) auftragsField.value = data.auftragsnummer;
     }
     if (data.patient_name) {
-        document.querySelector('input[name="patient_name"]').value = data.patient_name;
+        const patientField = document.querySelector('input[name="patient_name"]');
+        console.log('Patient Name field:', patientField);
+        if (patientField) patientField.value = data.patient_name;
     }
     if (data.herstellungsdatum) {
-        document.querySelector('input[name="herstellungsdatum"]').value = data.herstellungsdatum;
+        const dateField = document.querySelector('input[name="herstellungsdatum"]');
+        console.log('Herstellungsdatum field:', dateField);
+        if (dateField) dateField.value = data.herstellungsdatum;
     }
 
     // Product Works doldur
     if (data.product_works && data.product_works.length > 0) {
+        console.log('Filling product works, count:', data.product_works.length);
         data.product_works.forEach((work, index) => {
+            console.log(`Product work ${index}:`, work);
             if (index > 0) {
                 addProductWorkRow(); // Yeni satır ekle
             }
 
-            const form = document.querySelectorAll('.product-work-form')[index];
-            if (form) {
+            const rows = document.querySelectorAll('.product-work-row');
+            const row = rows[index];
+            console.log(`Product work row ${index}:`, row);
+            if (row) {
                 if (work.produktbezeichnung_arbeit) {
-                    form.querySelector('input[name*="produktbezeichnung_arbeit"]').value = work.produktbezeichnung_arbeit;
+                    const field = row.querySelector('input[name*="produktbezeichnung_arbeit"]');
+                    console.log(`Produktbezeichnung field ${index}:`, field);
+                    if (field) field.value = work.produktbezeichnung_arbeit;
                 }
                 if (work.zahnnummer) {
-                    form.querySelector('input[name*="zahnnummer"]').value = work.zahnnummer;
+                    const field = row.querySelector('input[name*="zahnnummer"]');
+                    console.log(`Zahnnummer field ${index}:`, field);
+                    if (field) field.value = work.zahnnummer;
                 }
                 if (work.zahnfarbe) {
-                    form.querySelector('input[name*="zahnfarbe"]').value = work.zahnfarbe;
+                    const field = row.querySelector('input[name*="zahnfarbe"]');
+                    console.log(`Zahnfarbe field ${index}:`, field);
+                    if (field) field.value = work.zahnfarbe;
                 }
             }
         });
@@ -432,42 +435,68 @@ function fillFormWithParsedData(data) {
 
     // Materials doldur
     if (data.materials && data.materials.length > 0) {
+        console.log('Filling materials, count:', data.materials.length);
         data.materials.forEach((material, index) => {
+            console.log(`Material ${index}:`, material);
             if (index > 0) {
                 addMaterialRow(); // Yeni satır ekle
             }
 
-            const form = document.querySelectorAll('.material-form')[index];
-            if (form) {
-                if (material.material) {
-                    const materialSelect = form.querySelector('select[name*="material"]');
-                    if (materialSelect) {
-                        // Material dropdown'da ara
-                        Array.from(materialSelect.options).forEach(option => {
-                            if (option.text.toLowerCase().includes(material.material.toLowerCase())) {
-                                materialSelect.value = option.value;
-                            }
-                        });
+            const rows = document.querySelectorAll('.material-row');
+            const row = rows[index];
+            console.log(`Material row ${index}:`, row);
+            if (row) {
+                const materialProductSelect = row.querySelector('select.material-product-select');
+                const materialInput = row.querySelector('input.material-input');
+                const firmaInput = row.querySelector('input.firma-input');
+                const bestandteileInput = row.querySelector('input.bestandteile-input');
+
+                // PDF'den gelen material ve firma ile eşleşen ürünü bul
+                if (material.material && material.firma) {
+                    const matchingProduct = materialProducts.find(p =>
+                        p.material === material.material && p.firma === material.firma
+                    );
+
+                    if (matchingProduct) {
+                        // Eşleşen ürün varsa dropdown'dan seç
+                        console.log(`Found matching product ID: ${matchingProduct.id}`);
+                        if (materialProductSelect) {
+                            materialProductSelect.value = matchingProduct.id;
+                        }
+                        if (materialInput) materialInput.value = matchingProduct.material;
+                        if (firmaInput) firmaInput.value = matchingProduct.firma;
+                        if (bestandteileInput) bestandteileInput.value = matchingProduct.bestandteile;
+                    } else {
+                        // Eşleşen ürün yoksa dropdown'a yeni option ekle
+                        console.log(`No matching product, adding new option: ${material.material} - ${material.firma}`);
+                        if (materialProductSelect) {
+                            const newOption = document.createElement('option');
+                            newOption.value = '';  // Empty value, kullanıcı elle oluşturmalı
+                            newOption.text = `${material.material} - ${material.firma} (PDF'den)`;
+                            newOption.selected = true;
+                            materialProductSelect.add(newOption);
+                        }
+                        // Hidden field'ları doldur
+                        if (materialInput) materialInput.value = material.material;
+                        if (firmaInput) firmaInput.value = material.firma;
+                        if (bestandteileInput) bestandteileInput.value = material.bestandteile || '';
                     }
                 }
-                if (material.firma) {
-                    const firmaSelect = form.querySelector('select[name*="firma"]');
-                    if (firmaSelect) {
-                        firmaSelect.value = material.firma;
-                    }
-                }
-                if (material.bestandteile) {
-                    form.querySelector('input[name*="bestandteile"]').value = material.bestandteile;
-                }
+
                 if (material.material_lot_no) {
-                    form.querySelector('input[name*="material_lot_no"]').value = material.material_lot_no;
+                    const field = row.querySelector('input[name$="-material_lot_no"]');
+                    console.log(`Lot No input ${index}:`, field);
+                    if (field) field.value = material.material_lot_no;
                 }
                 if (material.ce_status) {
-                    form.querySelector('input[name*="ce_status"]').value = material.ce_status === 'yes' ? 'Ja' : 'Nein';
+                    const field = row.querySelector('input[name$="-ce_status"]');
+                    console.log(`CE status input ${index}:`, field);
+                    if (field) field.value = material.ce_status === 'yes' ? 'Ja' : 'Nein';
                 }
             }
         });
     }
+    console.log('DEBUG: Finished fillFormWithParsedData');
 }
 
 window.onclick = function(event) {
