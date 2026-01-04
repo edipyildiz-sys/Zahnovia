@@ -28,10 +28,17 @@
 </style>
 
 <div class="page-header">
-    <h1 class="page-title">
-        <i class="fas fa-file-alt"></i> Neue Konformitätserklärung
-    </h1>
-    <p class="page-subtitle">Erstellen Sie Ihre Erklärung</p>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-file-alt"></i> Neue Konformitätserklärung
+            </h1>
+            <p class="page-subtitle">Erstellen Sie Ihre Erklärung</p>
+        </div>
+        <button type="button" onclick="openReferenceModal()" class="btn btn-primary" style="background: #6c757d;">
+            <i class="fas fa-file-upload"></i> Aus Referenz-PDF ausfüllen
+        </button>
+    </div>
 </div>
 
 <div class="card">
@@ -329,5 +336,175 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// ===== REFERANS PDF MODAL FONKSIYONLARI =====
+
+function openReferenceModal() {
+    document.getElementById('referenceModal').style.display = 'block';
+}
+
+function closeReferenceModal() {
+    document.getElementById('referenceModal').style.display = 'none';
+    document.getElementById('referencePdfFile').value = '';
+    document.getElementById('uploadStatus').innerHTML = '';
+}
+
+function uploadReferencePdf() {
+    const fileInput = document.getElementById('referencePdfFile');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Bitte wählen Sie eine PDF-Datei aus');
+        return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        alert('Bitte wählen Sie nur PDF-Dateien aus');
+        return;
+    }
+
+    const statusDiv = document.getElementById('uploadStatus');
+    statusDiv.innerHTML = '<p style="color: #17a2b8;"><i class="fas fa-spinner fa-spin"></i> PDF wird verarbeitet...</p>';
+
+    const formData = new FormData();
+    formData.append('pdf_file', file);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+    fetch('{% url "parse_reference_pdf" %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            statusDiv.innerHTML = '<p style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> ' + data.error + '</p>';
+            return;
+        }
+
+        // Formu doldur
+        fillFormWithParsedData(data);
+
+        statusDiv.innerHTML = '<p style="color: #28a745;"><i class="fas fa-check-circle"></i> PDF erfolgreich verarbeitet!</p>';
+
+        setTimeout(() => {
+            closeReferenceModal();
+        }, 1500);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        statusDiv.innerHTML = '<p style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> Fehler beim Verarbeiten der PDF</p>';
+    });
+}
+
+function fillFormWithParsedData(data) {
+    // Patienteninformationen doldur
+    if (data.auftragsnummer) {
+        document.querySelector('input[name="auftragsnummer"]').value = data.auftragsnummer;
+    }
+    if (data.patient_name) {
+        document.querySelector('input[name="patient_name"]').value = data.patient_name;
+    }
+    if (data.herstellungsdatum) {
+        document.querySelector('input[name="herstellungsdatum"]').value = data.herstellungsdatum;
+    }
+
+    // Product Works doldur
+    if (data.product_works && data.product_works.length > 0) {
+        data.product_works.forEach((work, index) => {
+            if (index > 0) {
+                addProductWorkRow(); // Yeni satır ekle
+            }
+
+            const form = document.querySelectorAll('.product-work-form')[index];
+            if (form) {
+                if (work.produktbezeichnung_arbeit) {
+                    form.querySelector('input[name*="produktbezeichnung_arbeit"]').value = work.produktbezeichnung_arbeit;
+                }
+                if (work.zahnnummer) {
+                    form.querySelector('input[name*="zahnnummer"]').value = work.zahnnummer;
+                }
+                if (work.zahnfarbe) {
+                    form.querySelector('input[name*="zahnfarbe"]').value = work.zahnfarbe;
+                }
+            }
+        });
+    }
+
+    // Materials doldur
+    if (data.materials && data.materials.length > 0) {
+        data.materials.forEach((material, index) => {
+            if (index > 0) {
+                addMaterialRow(); // Yeni satır ekle
+            }
+
+            const form = document.querySelectorAll('.material-form')[index];
+            if (form) {
+                if (material.material) {
+                    const materialSelect = form.querySelector('select[name*="material"]');
+                    if (materialSelect) {
+                        // Material dropdown'da ara
+                        Array.from(materialSelect.options).forEach(option => {
+                            if (option.text.toLowerCase().includes(material.material.toLowerCase())) {
+                                materialSelect.value = option.value;
+                            }
+                        });
+                    }
+                }
+                if (material.firma) {
+                    const firmaSelect = form.querySelector('select[name*="firma"]');
+                    if (firmaSelect) {
+                        firmaSelect.value = material.firma;
+                    }
+                }
+                if (material.bestandteile) {
+                    form.querySelector('input[name*="bestandteile"]').value = material.bestandteile;
+                }
+                if (material.material_lot_no) {
+                    form.querySelector('input[name*="material_lot_no"]').value = material.material_lot_no;
+                }
+                if (material.ce_status) {
+                    form.querySelector('input[name*="ce_status"]').value = material.ce_status === 'yes' ? 'Ja' : 'Nein';
+                }
+            }
+        });
+    }
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('referenceModal');
+    if (event.target == modal) {
+        closeReferenceModal();
+    }
+}
 </script>
+
+<!-- Reference PDF Upload Modal -->
+<div id="referenceModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6);">
+    <div style="background:#fff; margin:5% auto; border-radius:12px; width:90%; max-width:600px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:25px 30px; border-bottom:1px solid #e2e8f0;">
+            <h2 style="margin:0; color:#2d3748; font-size:24px;">
+                <i class="fas fa-file-upload"></i> Referenz-PDF hochladen
+            </h2>
+            <span onclick="closeReferenceModal()" style="font-size:32px; color:#718096; cursor:pointer; line-height:1;">&times;</span>
+        </div>
+        <div style="padding:30px;">
+            <div style="margin-bottom:20px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#2d3748;">
+                    <i class="fas fa-file-pdf"></i> PDF-Datei auswählen
+                </label>
+                <input type="file" id="referencePdfFile" accept=".pdf" style="width:100%; padding:12px; border:2px solid #e2e8f0; border-radius:6px;">
+            </div>
+            <div id="uploadStatus" style="margin-bottom:20px;"></div>
+            <div style="display:flex; gap:15px; justify-content:flex-end;">
+                <button type="button" onclick="uploadReferencePdf()" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Hochladen & Ausfüllen
+                </button>
+                <button type="button" onclick="closeReferenceModal()" class="btn" style="background:#6c757d; color:white;">
+                    <i class="fas fa-times"></i> Abbrechen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

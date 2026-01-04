@@ -1,8 +1,13 @@
 import os
+import re
 from django.template.loader import render_to_string
 from django.conf import settings
 from weasyprint import HTML
 from utils.google_drive import get_drive_service, upload_file, get_or_create_archive_folder
+try:
+    import PyPDF2
+except ImportError:
+    PyPDF2 = None
 
 
 def generate_declaration_pdf(declaration):
@@ -166,10 +171,10 @@ def upload_to_drive(file, title, file_name):
 def delete_from_drive(file_id):
     """
     Google Drive'dan dosya sil
-    
+
     Args:
         file_id: Google Drive file ID
-        
+
     Returns:
         bool: Başarılı ise True
     """
@@ -180,3 +185,115 @@ def delete_from_drive(file_id):
     except Exception as e:
         print(f"Google Drive delete error: {e}")
         return False
+
+
+def parse_declaration_pdf(pdf_file):
+    """
+    Referans PDF dosyasından konformitätserklärung bilgilerini çıkar
+
+    Args:
+        pdf_file: Django UploadedFile object (PDF)
+
+    Returns:
+        dict: Parse edilmiş veriler
+        {
+            'auftragsnummer': str,
+            'patient_name': str,
+            'herstellungsdatum': str (YYYY-MM-DD),
+            'product_works': [
+                {'produktbezeichnung_arbeit': str, 'zahnnummer': str, 'zahnfarbe': str},
+                ...
+            ],
+            'materials': [
+                {'material': str, 'firma': str, 'bestandteile': str, 'material_lot_no': str, 'ce_status': str},
+                ...
+            ]
+        }
+    """
+    if not PyPDF2:
+        return {'error': 'PyPDF2 kütüphanesi yüklü değil'}
+
+    try:
+        # PDF'i oku
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        text = ""
+
+        # Tüm sayfaları oku
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+
+        # Veriyi parse et
+        parsed_data = {
+            'auftragsnummer': '',
+            'patient_name': '',
+            'herstellungsdatum': '',
+            'product_works': [],
+            'materials': []
+        }
+
+        # Auftragsnummer çıkar
+        auftrag_match = re.search(r'Auftragsnummer[:\s]+([A-Z0-9-]+)', text, re.IGNORECASE)
+        if auftrag_match:
+            parsed_data['auftragsnummer'] = auftrag_match.group(1).strip()
+
+        # Patient name çıkar
+        patient_match = re.search(r'Patient(?:enname)?[:\s]+([^\n]+)', text, re.IGNORECASE)
+        if patient_match:
+            parsed_data['patient_name'] = patient_match.group(1).strip()
+
+        # Herstellungsdatum çıkar (DD.MM.YYYY formatında olabilir)
+        date_match = re.search(r'Herstellungsdatum[:\s]+(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})', text, re.IGNORECASE)
+        if date_match:
+            day, month, year = date_match.groups()
+            parsed_data['herstellungsdatum'] = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+
+        # Produktbezeichnung/Arbeit tablosunu çıkar
+        # Format: "Produktbezeichnung/Arbeit | Zahnnummer | Zahnfarbe"
+        product_pattern = r'([^\|]+)\s*\|\s*(\d+[,\s]*\d*)\s*\|\s*([A-Z0-9]+)'
+        product_matches = re.findall(product_pattern, text)
+
+        for match in product_matches:
+            if len(match) == 3:
+                parsed_data['product_works'].append({
+                    'produktbezeichnung_arbeit': match[0].strip(),
+                    'zahnnummer': match[1].strip(),
+                    'zahnfarbe': match[2].strip()
+                })
+
+        # Materialien tablosunu çıkar
+        # Daha genel bir yaklaşım: CE işareti, firma isimleri vb. ara
+        material_lines = text.split('\n')
+
+        for i, line in enumerate(material_lines):
+            # CE işareti içeren satırları ara
+            if 'CE' in line or 'Lot' in line:
+                # Material bilgisini parse et
+                parts = re.split(r'\s{2,}|\t', line)  # 2+ boşluk veya tab ile böl
+                if len(parts) >= 3:
+                    material_data = {
+                        'material': '',
+                        'firma': '',
+                        'bestandteile': '',
+                        'material_lot_no': '',
+                        'ce_status': 'yes' if 'CE' in line else 'no'
+                    }
+
+                    # İlk kısım genelde material
+                    material_data['material'] = parts[0].strip()
+
+                    # Firma ve diğer bilgileri çıkarmaya çalış
+                    for part in parts[1:]:
+                        if 'Lot' in part or 'LOT' in part:
+                            lot_match = re.search(r'(?:Lot|LOT)[:\s]*([A-Z0-9-]+)', part)
+                            if lot_match:
+                                material_data['material_lot_no'] = lot_match.group(1)
+                        elif len(part) > 2 and material_data['firma'] == '':
+                            material_data['firma'] = part.strip()
+
+                    if material_data['material']:
+                        parsed_data['materials'].append(material_data)
+
+        return parsed_data
+
+    except Exception as e:
+        return {'error': f'PDF parse hatası: {str(e)}'}

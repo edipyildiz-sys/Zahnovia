@@ -2,12 +2,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
 from django.contrib import messages
-from django.http import HttpResponse, FileResponse, Http404
+from django.http import HttpResponse, FileResponse, Http404, JsonResponse
 from datetime import date, datetime
 from django.db.models import Q
 from .models import Declaration, DeclarationItem, MaterialProduct, HerstellerProfile, ProductWork, ArchiveDocument
 from .forms import DeclarationItemFormSet, ProductWorkFormSet
-from .utils import generate_declaration_pdf
+from .utils import generate_declaration_pdf, parse_declaration_pdf
+from django.views.decorators.http import require_POST
 
 
 def user_login(request):
@@ -420,7 +421,32 @@ def archive_delete(request, pk):
         document.delete()
         messages.success(request, f'Dokument "{title}" wurde gelöscht!')
         return redirect('archive_list')
-    
+
     return render(request, 'declarations/archive/archive_delete.html', {
         'document': document
     })
+
+
+@login_required
+@require_POST
+def parse_reference_pdf(request):
+    """
+    AJAX endpoint: Referans PDF dosyasını parse et ve JSON olarak döndür
+    """
+    if 'pdf_file' not in request.FILES:
+        return JsonResponse({'error': 'Keine PDF-Datei hochgeladen'}, status=400)
+
+    pdf_file = request.FILES['pdf_file']
+
+    # Dosya türünü kontrol et
+    if not pdf_file.name.lower().endswith('.pdf'):
+        return JsonResponse({'error': 'Nur PDF-Dateien sind erlaubt'}, status=400)
+
+    # PDF'i parse et
+    parsed_data = parse_declaration_pdf(pdf_file)
+
+    # Hata kontrolü
+    if 'error' in parsed_data:
+        return JsonResponse({'error': parsed_data['error']}, status=400)
+
+    return JsonResponse(parsed_data)

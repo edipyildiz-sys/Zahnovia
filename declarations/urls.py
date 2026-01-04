@@ -28,4 +28,7 @@ urlpatterns = [
     path('archive/upload/', views.archive_upload, name='archive_upload'),
     path('archive/<int:pk>/', views.archive_view, name='archive_view'),
     path('archive/<int:pk>/delete/', views.archive_delete, name='archive_delete'),
+
+    # AJAX Endpoints
+    path('api/parse-reference-pdf/', views.parse_reference_pdf, name='parse_reference_pdf'),
 ]
