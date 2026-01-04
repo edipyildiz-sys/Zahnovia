@@ -55,6 +55,20 @@
         background: #fff3cd;
         color: #856404;
     }
+    .delete-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+    .delete-btn:hover {
+        background: #c82333;
+        transform: scale(1.05);
+    }
 </style>
 {% endblock %}
 
@@ -85,6 +99,7 @@
                 <th>Erstellt</th>
                 <th style="width: 120px; text-align: center;">Status</th>
                 <th style="width: 100px; text-align: center;">PDF</th>
+                <th style="width: 80px; text-align: center;">Aktion</th>
             </tr>
         </thead>
         <tbody>
@@ -118,6 +133,11 @@
                         <i class="fas fa-spinner"></i> —
                     </button>
                     {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    <a href="{% url 'declaration_delete' decl.pk %}" class="delete-btn" onclick="event.stopPropagation(); return confirm('{{ decl.declaration_number }} löschen? Diese Aktion kann nicht rückgängig gemacht werden.');">
+                        <i class="fas fa-trash"></i>
+                    </a>
                 </td>
             </tr>
             {% endfor %}

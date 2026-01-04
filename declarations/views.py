@@ -108,11 +108,47 @@ def declaration_create(request):
                 pw.line_number = i
                 pw.save()
 
+            # Önce tüm material ve firma değerlerini POST'tan al (hidden field'lar)
+            material_data = {}
+            for key in request.POST.keys():
+                if key.startswith('materials-') and '-material' in key:
+                    try:
+                        # materials-0-material -> index: 0, field: material
+                        parts = key.split('-')
+                        if len(parts) == 3:
+                            index = int(parts[1])
+                            field = parts[2]
+                            value = request.POST.get(key, '').strip()
+
+                            if index not in material_data:
+                                material_data[index] = {}
+
+                            material_data[index][field] = value
+                    except (ValueError, IndexError):
+                        continue
+
             # Materials'ları kaydet
             items = material_formset.save(commit=False)
-            for i, item in enumerate(items, start=1):
-                item.line_number = i
-                item.save()
+            saved_count = 0
+            for form_index, form in enumerate(material_formset.forms):
+                # DELETE checkbox işaretliyse atla
+                if form.cleaned_data.get('DELETE'):
+                    continue
+
+                # Bu form için item'ı al
+                if saved_count < len(items):
+                    item = items[saved_count]
+                    item.line_number = saved_count + 1
+
+                    # Hidden field'lardan material ve firma değerlerini al
+                    if form_index in material_data:
+                        if not item.material and material_data[form_index].get('material'):
+                            item.material = material_data[form_index]['material']
+                        if not item.firma and material_data[form_index].get('firma'):
+                            item.firma = material_data[form_index]['firma']
+
+                    item.save()
+                    saved_count += 1
 
             # PDF oluştur ve Google Drive'a yükle
             try:
@@ -200,11 +236,50 @@ def declaration_edit(request, pk):
 
             # Mevcut materials'ı sil
             declaration.items.all().delete()
-            # Yeni materials'ı kaydet
+
+            # Önce tüm material ve firma değerlerini POST'tan al (hidden field'lar)
+            material_data = {}
+            for key in request.POST.keys():
+                if key.startswith('materials-') and '-material' in key:
+                    try:
+                        # materials-0-material -> index: 0, field: material
+                        parts = key.split('-')
+                        if len(parts) == 3:
+                            index = int(parts[1])
+                            field = parts[2]
+                            value = request.POST.get(key, '').strip()
+
+                            if index not in material_data:
+                                material_data[index] = {}
+
+                            material_data[index][field] = value
+                    except (ValueError, IndexError):
+                        continue
+
+            # Formset'ten item'ları al
             items = material_formset.save(commit=False)
-            for i, item in enumerate(items, start=1):
-                item.line_number = i
-                item.save()
+
+            # Her bir kaydedilecek item için
+            saved_count = 0
+            for form_index, form in enumerate(material_formset.forms):
+                # DELETE checkbox işaretliyse atla
+                if form.cleaned_data.get('DELETE'):
+                    continue
+
+                # Bu form için item'ı al
+                if saved_count < len(items):
+                    item = items[saved_count]
+                    item.line_number = saved_count + 1
+
+                    # Hidden field'lardan material ve firma değerlerini al
+                    if form_index in material_data:
+                        if not item.material and material_data[form_index].get('material'):
+                            item.material = material_data[form_index]['material']
+                        if not item.firma and material_data[form_index].get('firma'):
+                            item.firma = material_data[form_index]['firma']
+
+                    item.save()
+                    saved_count += 1
 
             # Eski PDF'i Google Drive'dan sil
             if declaration.pdf_url:
@@ -262,6 +337,31 @@ def declaration_edit(request, pk):
         'material_products': material_products,
         'hersteller_profile': hersteller_profile
     })
+
+
+@login_required
+def declaration_delete(request, pk):
+    """Beyan sil"""
+    if request.user.is_superuser:
+        return redirect('/admin/')
+
+    declaration = get_object_or_404(Declaration, pk=pk, praxis=request.user)
+
+    # Google Drive'dan PDF'i sil
+    if declaration.pdf_url:
+        try:
+            from .utils import delete_from_drive
+            if '/d/' in declaration.pdf_url:
+                file_id = declaration.pdf_url.split('/d/')[1].split('/')[0]
+                delete_from_drive(file_id)
+                print(f"PDF silindi: {file_id}")
+        except Exception as e:
+            print(f"PDF silinirken hata: {str(e)}")
+
+    declaration_number = declaration.declaration_number
+    declaration.delete()
+    messages.success(request, f'Beyan {declaration_number} başarıyla silindi!')
+    return redirect('declaration_list')
 
 
 @login_required

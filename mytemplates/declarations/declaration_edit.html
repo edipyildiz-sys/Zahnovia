@@ -308,6 +308,45 @@ document.addEventListener('DOMContentLoaded', function() {
             input.value = 'Ja';
         }
     });
+
+    // IMPORTANT: Edit modda mevcut material/firma değerlerini hidden field'lara yaz
+    document.querySelectorAll('.material-row').forEach(row => {
+        const materialProductSelect = row.querySelector('.material-product-select');
+        const materialInput = row.querySelector('.material-input');
+        const firmaInput = row.querySelector('.firma-input');
+        const bestandteileInput = row.querySelector('.bestandteile-input');
+
+        // Eğer dropdown'da bir seçim varsa ve hidden field'lar boşsa
+        if (materialProductSelect && materialProductSelect.value) {
+            const productId = parseInt(materialProductSelect.value);
+            const selectedProduct = materialProducts.find(p => p.id === productId);
+
+            if (selectedProduct) {
+                // Hidden field'ları doldur
+                if (materialInput && !materialInput.value) {
+                    materialInput.value = selectedProduct.material;
+                }
+                if (firmaInput && !firmaInput.value) {
+                    firmaInput.value = selectedProduct.firma;
+                }
+                if (bestandteileInput && !bestandteileInput.value) {
+                    bestandteileInput.value = selectedProduct.bestandteile;
+                }
+            }
+        }
+
+        // Eğer hidden field'larda değer varsa ama dropdown'da seçim yoksa
+        // Bu durumda eşleşen ürünü bul ve dropdown'dan seç
+        if (materialInput && firmaInput && materialInput.value && firmaInput.value && !materialProductSelect.value) {
+            const matchingProduct = materialProducts.find(p =>
+                p.material === materialInput.value && p.firma === firmaInput.value
+            );
+
+            if (matchingProduct && materialProductSelect) {
+                materialProductSelect.value = matchingProduct.id;
+            }
+        }
+    });
 });
 
 // ===== REFERANS PDF MODAL FONKSIYONLARI =====
