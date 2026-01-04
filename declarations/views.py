@@ -206,13 +206,25 @@ def declaration_edit(request, pk):
                 item.line_number = i
                 item.save()
 
-            # PDF'i yeniden oluştur
+            # Eski PDF'i Google Drive'dan sil
+            if declaration.pdf_url:
+                try:
+                    from .utils import delete_from_drive
+                    # URL'den file ID'yi çıkar
+                    if '/d/' in declaration.pdf_url:
+                        file_id = declaration.pdf_url.split('/d/')[1].split('/')[0]
+                        delete_from_drive(file_id)
+                        print(f"Eski PDF silindi: {file_id}")
+                except Exception as e:
+                    print(f"Eski PDF silinirken hata: {str(e)}")
+
+            # PDF'i yeniden oluştur ve yükle
             try:
                 result = generate_declaration_pdf(declaration)
                 if result.get('drive_url'):
                     declaration.pdf_url = result['drive_url']
                     declaration.save()
-                    messages.success(request, f'Beyan {declaration.declaration_number} başarıyla güncellendi!')
+                    messages.success(request, f'Beyan {declaration.declaration_number} başarıyla güncellendi ve PDF yenilendi!')
                 else:
                     messages.warning(request, 'Beyan güncellendi ama PDF yüklemesi başarısız oldu.')
             except Exception as e:
