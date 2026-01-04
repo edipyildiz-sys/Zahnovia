@@ -1,0 +1,539 @@
+{% extends 'base.html' %}
+
+{% block title %}Konformitätserklärung Bearbeiten - Zahnovia{% endblock %}
+
+{% block content %}
+<style>
+    .form-control, select.form-control {
+        padding: 10px;
+        border: 2px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .form-control:focus, select.form-control:focus {
+        border-color: #17a2b8;
+        outline: none;
+    }
+
+    input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+
+    .bestandteile-input {
+        background-color: #f7fafc !important;
+    }
+</style>
+
+<div class="page-header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 class="page-title">
+                <i class="fas fa-edit"></i> Konformitätserklärung Bearbeiten
+            </h1>
+            <p class="page-subtitle">Bearbeiten Sie {{ declaration.declaration_number }}</p>
+        </div>
+        <button type="button" onclick="openReferenceModal()" class="btn btn-primary" style="background: #6c757d;">
+            <i class="fas fa-file-upload"></i> Aus Referenz-PDF ausfüllen
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <form method="POST" id="declaration-form">
+        {% csrf_token %}
+
+        <h3 style="margin-bottom: 20px; color: #2d3748;">
+            <i class="fas fa-user"></i> Patienteninformationen
+        </h3>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div class="form-group">
+                <label class="form-label">Verordnender Arzt *</label>
+                <input type="text" name="verordnender_arzt" class="form-control"
+                       value="{{ hersteller_profile.verordnender_arzt|default:'' }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Auftragsnummer</label>
+                <input type="text" name="auftragsnummer" class="form-control" placeholder="Auftragsnummer" value="{{ declaration.auftragsnummer|default:'' }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Patientenname *</label>
+                <input type="text" name="patient_name" class="form-control" required value="{{ declaration.patient_name }}">
+            </div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <div class="form-group">
+                <label class="form-label">Herstellungsdatum *</label>
+                <input type="date" name="herstellungsdatum" class="form-control" style="max-width: 300px;" required value="{{ declaration.herstellungsdatum|date:'Y-m-d' }}">
+            </div>
+        </div>
+
+        <h3 style="margin-bottom: 20px; color: #2d3748; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+            <i class="fas fa-tooth"></i> Produktbezeichnung / Arbeit
+        </h3>
+
+        {{ product_work_formset.management_form }}
+
+        <div id="product-work-container">
+            {% for form in product_work_formset %}
+            <div class="product-work-row" data-row-index="{{ forloop.counter0 }}">
+                {{ form.id }}
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 60px; gap: 10px; margin-bottom: 15px; align-items: end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Produktbezeichnung / Arbeit *</label>
+                        {{ form.produktbezeichnung_arbeit }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Zahnnummer</label>
+                        {{ form.zahnnummer }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Zahnfarbe</label>
+                        {{ form.zahnfarbe }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="visibility: hidden;">Del</label>
+                        {{ form.DELETE }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 15px; margin-bottom: 30px;">
+            <button type="button" id="add-product-work-btn" class="btn" style="background: #17a2b8; color: white;">
+                <i class="fas fa-plus"></i> Zeile hinzufügen
+            </button>
+        </div>
+
+        <h3 style="margin-bottom: 25px; color: #2d3748; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+            <i class="fas fa-list"></i> Materialien
+        </h3>
+
+        {{ material_formset.management_form }}
+
+        <div id="material-container">
+            {% for form in material_formset %}
+            <div class="material-row" data-row-index="{{ forloop.counter0 }}">
+                {{ form.id }}
+                {{ form.material }}
+                {{ form.firma }}
+                <div style="display: grid; grid-template-columns: 300px 1fr 150px 80px 60px; gap: 10px; margin-bottom: 15px; align-items: end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Material Product *</label>
+                        {{ form.material_product }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Bestandteile</label>
+                        {{ form.bestandteile }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Lot No. *</label>
+                        {{ form.material_lot_no }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">CE</label>
+                        {{ form.ce_status }}
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" style="visibility: hidden;">Del</label>
+                        {{ form.DELETE }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 15px; margin-bottom: 30px;">
+            <button type="button" id="add-material-btn" class="btn" style="background: #17a2b8; color: white;">
+                <i class="fas fa-plus"></i> Zeile hinzufügen
+            </button>
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0; display: flex; gap: 15px;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Erklärung Erstellen
+            </button>
+            <a href="{% url 'dashboard' %}" class="btn" style="background: #e2e8f0; color: #2d3748;">
+                <i class="fas fa-times"></i> Abbrechen
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Material Products verilerini JavaScript objesine çevir
+const materialProducts = [
+    {% for product in material_products %}
+    {
+        id: {{ product.id }},
+        material: "{{ product.material|escapejs }}",
+        firma: "{{ product.firma|escapejs }}",
+        bestandteile: "{{ product.bestandteile|escapejs }}",
+    },
+    {% endfor %}
+];
+
+// Material Product seçildiğinde hidden field'ları ve bestandteile'yi doldur
+function attachChangeHandlers() {
+    document.querySelectorAll('.material-row').forEach(row => {
+        const materialProductSelect = row.querySelector('.material-product-select');
+        const materialInput = row.querySelector('.material-input');
+        const firmaInput = row.querySelector('.firma-input');
+        const bestandteileInput = row.querySelector('.bestandteile-input');
+
+        if (materialProductSelect) {
+            materialProductSelect.addEventListener('change', function() {
+                const productId = parseInt(this.value);
+
+                if (productId) {
+                    // Seçilen ürünü bul
+                    const selectedProduct = materialProducts.find(p => p.id === productId);
+
+                    if (selectedProduct) {
+                        // Hidden field'ları doldur
+                        materialInput.value = selectedProduct.material;
+                        firmaInput.value = selectedProduct.firma;
+                        bestandteileInput.value = selectedProduct.bestandteile;
+                    }
+                } else {
+                    // Seçim kaldırıldıysa temizle
+                    materialInput.value = '';
+                    firmaInput.value = '';
+                    bestandteileInput.value = '';
+                }
+            });
+        }
+    });
+}
+
+// Product Work row ekleme fonksiyonu
+function addProductWorkRow() {
+    const container = document.getElementById('product-work-container');
+    const totalFormsInput = document.querySelector('#id_product_works-TOTAL_FORMS');
+    const currentTotal = parseInt(totalFormsInput.value);
+
+    // Neue Zeile klonen (son satırdan)
+    const lastRow = container.querySelector('.product-work-row:last-child');
+    const newRow = lastRow.cloneNode(true);
+
+    // Index'i güncelle
+    newRow.setAttribute('data-row-index', currentTotal);
+
+    // Formdaki tüm input field'larını güncelle
+    newRow.querySelectorAll('input, select').forEach(field => {
+        const name = field.getAttribute('name');
+        if (name) {
+            const newName = name.replace(/product_works-\d+/, `product_works-${currentTotal}`);
+            field.setAttribute('name', newName);
+            field.setAttribute('id', `id_${newName}`);
+
+            // Değerleri temizle
+            if (field.type === 'checkbox') {
+                field.checked = false;
+            } else if (field.tagName === 'SELECT') {
+                field.selectedIndex = 0;
+            } else if (!field.id.includes('-id')) {
+                field.value = '';
+            }
+        }
+    });
+
+    // Neue Zeile hinzufügen
+    container.appendChild(newRow);
+
+    // Total forms sayısını artır
+    totalFormsInput.value = currentTotal + 1;
+}
+
+// Product Work - Zeile hinzufügen butonu
+document.getElementById('add-product-work-btn').addEventListener('click', addProductWorkRow);
+
+// Material row ekleme fonksiyonu
+function addMaterialRow() {
+    const container = document.getElementById('material-container');
+    const totalFormsInput = document.querySelector('#id_materials-TOTAL_FORMS');
+    const currentTotal = parseInt(totalFormsInput.value);
+
+    // Neue Zeile klonen (son satırdan)
+    const lastRow = container.querySelector('.material-row:last-child');
+    const newRow = lastRow.cloneNode(true);
+
+    // Index'i güncelle
+    newRow.setAttribute('data-row-index', currentTotal);
+
+    // Formdaki tüm input field'larını güncelle
+    newRow.querySelectorAll('input, select').forEach(field => {
+        const name = field.getAttribute('name');
+        if (name) {
+            const newName = name.replace(/materials-\d+/, `materials-${currentTotal}`);
+            field.setAttribute('name', newName);
+            field.setAttribute('id', `id_${newName}`);
+
+            // Değerleri temizle
+            if (field.type === 'checkbox') {
+                field.checked = false;
+            } else if (field.tagName === 'SELECT') {
+                field.selectedIndex = 0;
+            } else if (!field.id.includes('-id')) {
+                field.value = field.classList.contains('form-control') && field.getAttribute('value') === 'Ja' ? 'Ja' : '';
+            }
+        }
+    });
+
+    // Neue Zeile hinzufügen
+    container.appendChild(newRow);
+
+    // Total forms sayısını artır
+    totalFormsInput.value = currentTotal + 1;
+
+    // Event handler'ları ekle
+    attachChangeHandlers();
+}
+
+// Material - Zeile hinzufügen butonu
+document.getElementById('add-material-btn').addEventListener('click', addMaterialRow);
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+    attachChangeHandlers();
+
+    // CE status field'larına default "Ja" değerini set et
+    document.querySelectorAll('input[name*="ce_status"]').forEach(input => {
+        if (!input.value) {
+            input.value = 'Ja';
+        }
+    });
+});
+
+// ===== REFERANS PDF MODAL FONKSIYONLARI =====
+
+function openReferenceModal() {
+    document.getElementById('referenceModal').style.display = 'block';
+}
+
+function closeReferenceModal() {
+    document.getElementById('referenceModal').style.display = 'none';
+    document.getElementById('referencePdfFile').value = '';
+    document.getElementById('uploadStatus').innerHTML = '';
+}
+
+function uploadReferencePdf() {
+    const fileInput = document.getElementById('referencePdfFile');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Bitte wählen Sie eine PDF-Datei aus');
+        return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        alert('Bitte wählen Sie nur PDF-Dateien aus');
+        return;
+    }
+
+    const statusDiv = document.getElementById('uploadStatus');
+    statusDiv.innerHTML = '<p style="color: #17a2b8;"><i class="fas fa-spinner fa-spin"></i> PDF wird verarbeitet...</p>';
+
+    const formData = new FormData();
+    formData.append('pdf_file', file);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+    fetch('{% url "parse_reference_pdf" %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Debug: Log received data
+        console.log('==========================================');
+        console.log('DEBUG: RECEIVED DATA FROM API');
+        console.log('==========================================');
+        console.log('Full data:', data);
+        console.log('Auftragsnummer:', data.auftragsnummer);
+        console.log('Patient Name:', data.patient_name);
+        console.log('Herstellungsdatum:', data.herstellungsdatum);
+        console.log('Product Works:', data.product_works);
+        console.log('Materials:', data.materials);
+        console.log('==========================================');
+
+        if (data.error) {
+            statusDiv.innerHTML = '<p style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> ' + data.error + '</p>';
+            return;
+        }
+
+        // Formu doldur
+        fillFormWithParsedData(data);
+
+        statusDiv.innerHTML = '<p style="color: #28a745;"><i class="fas fa-check-circle"></i> PDF erfolgreich verarbeitet!</p>';
+
+        setTimeout(() => {
+            closeReferenceModal();
+        }, 1500);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        statusDiv.innerHTML = '<p style="color: #dc3545;"><i class="fas fa-exclamation-circle"></i> Fehler beim Verarbeiten der PDF</p>';
+    });
+}
+
+function fillFormWithParsedData(data) {
+    console.log('DEBUG: Starting fillFormWithParsedData');
+
+    // Patienteninformationen doldur
+    if (data.auftragsnummer) {
+        const auftragsField = document.querySelector('input[name="auftragsnummer"]');
+        console.log('Auftragsnummer field:', auftragsField);
+        if (auftragsField) auftragsField.value = data.auftragsnummer;
+    }
+    if (data.patient_name) {
+        const patientField = document.querySelector('input[name="patient_name"]');
+        console.log('Patient Name field:', patientField);
+        if (patientField) patientField.value = data.patient_name;
+    }
+    if (data.herstellungsdatum) {
+        const dateField = document.querySelector('input[name="herstellungsdatum"]');
+        console.log('Herstellungsdatum field:', dateField);
+        if (dateField) dateField.value = data.herstellungsdatum;
+    }
+
+    // Product Works doldur
+    if (data.product_works && data.product_works.length > 0) {
+        console.log('Filling product works, count:', data.product_works.length);
+        data.product_works.forEach((work, index) => {
+            console.log(`Product work ${index}:`, work);
+            if (index > 0) {
+                addProductWorkRow(); // Yeni satır ekle
+            }
+
+            const rows = document.querySelectorAll('.product-work-row');
+            const row = rows[index];
+            console.log(`Product work row ${index}:`, row);
+            if (row) {
+                if (work.produktbezeichnung_arbeit) {
+                    const field = row.querySelector('input[name*="produktbezeichnung_arbeit"]');
+                    console.log(`Produktbezeichnung field ${index}:`, field);
+                    if (field) field.value = work.produktbezeichnung_arbeit;
+                }
+                if (work.zahnnummer) {
+                    const field = row.querySelector('input[name*="zahnnummer"]');
+                    console.log(`Zahnnummer field ${index}:`, field);
+                    if (field) field.value = work.zahnnummer;
+                }
+                if (work.zahnfarbe) {
+                    const field = row.querySelector('input[name*="zahnfarbe"]');
+                    console.log(`Zahnfarbe field ${index}:`, field);
+                    if (field) field.value = work.zahnfarbe;
+                }
+            }
+        });
+    }
+
+    // Materials doldur
+    if (data.materials && data.materials.length > 0) {
+        console.log('Filling materials, count:', data.materials.length);
+        data.materials.forEach((material, index) => {
+            console.log(`Material ${index}:`, material);
+            if (index > 0) {
+                addMaterialRow(); // Yeni satır ekle
+            }
+
+            const rows = document.querySelectorAll('.material-row');
+            const row = rows[index];
+            console.log(`Material row ${index}:`, row);
+            if (row) {
+                const materialProductSelect = row.querySelector('select.material-product-select');
+                const materialInput = row.querySelector('input.material-input');
+                const firmaInput = row.querySelector('input.firma-input');
+                const bestandteileInput = row.querySelector('input.bestandteile-input');
+
+                // PDF'den gelen material ve firma ile eşleşen ürünü bul
+                if (material.material && material.firma) {
+                    const matchingProduct = materialProducts.find(p =>
+                        p.material === material.material && p.firma === material.firma
+                    );
+
+                    if (matchingProduct) {
+                        // Eşleşen ürün varsa dropdown'dan seç
+                        console.log(`Found matching product ID: ${matchingProduct.id}`);
+                        if (materialProductSelect) {
+                            materialProductSelect.value = matchingProduct.id;
+                        }
+                        if (materialInput) materialInput.value = matchingProduct.material;
+                        if (firmaInput) firmaInput.value = matchingProduct.firma;
+                        if (bestandteileInput) bestandteileInput.value = matchingProduct.bestandteile;
+                    } else {
+                        // Eşleşen ürün yoksa dropdown'a yeni option ekle
+                        console.log(`No matching product, adding new option: ${material.material} - ${material.firma}`);
+                        if (materialProductSelect) {
+                            const newOption = document.createElement('option');
+                            newOption.value = '';  // Empty value, kullanıcı elle oluşturmalı
+                            newOption.text = `${material.material} - ${material.firma} (PDF'den)`;
+                            newOption.selected = true;
+                            materialProductSelect.add(newOption);
+                        }
+                        // Hidden field'ları doldur
+                        if (materialInput) materialInput.value = material.material;
+                        if (firmaInput) firmaInput.value = material.firma;
+                        if (bestandteileInput) bestandteileInput.value = material.bestandteile || '';
+                    }
+                }
+
+                if (material.material_lot_no) {
+                    const field = row.querySelector('input[name$="-material_lot_no"]');
+                    console.log(`Lot No input ${index}:`, field);
+                    if (field) field.value = material.material_lot_no;
+                }
+                if (material.ce_status) {
+                    const field = row.querySelector('input[name$="-ce_status"]');
+                    console.log(`CE status input ${index}:`, field);
+                    if (field) field.value = material.ce_status === 'yes' ? 'Ja' : 'Nein';
+                }
+            }
+        });
+    }
+    console.log('DEBUG: Finished fillFormWithParsedData');
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('referenceModal');
+    if (event.target == modal) {
+        closeReferenceModal();
+    }
+}
+</script>
+
+<!-- Reference PDF Upload Modal -->
+<div id="referenceModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6);">
+    <div style="background:#fff; margin:5% auto; border-radius:12px; width:90%; max-width:600px; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:25px 30px; border-bottom:1px solid #e2e8f0;">
+            <h2 style="margin:0; color:#2d3748; font-size:24px;">
+                <i class="fas fa-file-upload"></i> Referenz-PDF hochladen
+            </h2>
+            <span onclick="closeReferenceModal()" style="font-size:32px; color:#718096; cursor:pointer; line-height:1;">&times;</span>
+        </div>
+        <div style="padding:30px;">
+            <div style="margin-bottom:20px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#2d3748;">
+                    <i class="fas fa-file-pdf"></i> PDF-Datei auswählen
+                </label>
+                <input type="file" id="referencePdfFile" accept=".pdf" style="width:100%; padding:12px; border:2px solid #e2e8f0; border-radius:6px;">
+            </div>
+            <div id="uploadStatus" style="margin-bottom:20px;"></div>
+            <div style="display:flex; gap:15px; justify-content:flex-end;">
+                <button type="button" onclick="uploadReferencePdf()" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Hochladen & Ausfüllen
+                </button>
+                <button type="button" onclick="closeReferenceModal()" class="btn" style="background:#6c757d; color:white;">
+                    <i class="fas fa-times"></i> Abbrechen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

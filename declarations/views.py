@@ -5,8 +5,9 @@ from django.contrib import messages
 from django.http import HttpResponse, FileResponse, Http404, JsonResponse
 from datetime import date, datetime
 from django.db.models import Q
+from django import forms
 from .models import Declaration, DeclarationItem, MaterialProduct, HerstellerProfile, ProductWork, ArchiveDocument
-from .forms import DeclarationItemFormSet, ProductWorkFormSet
+from .forms import DeclarationItemFormSet, ProductWorkFormSet, DeclarationItemForm, ProductWorkForm, BaseDeclarationItemFormSet
 from .utils import generate_declaration_pdf, parse_declaration_pdf
 from django.views.decorators.http import require_POST
 
@@ -163,12 +164,101 @@ def declaration_create(request):
 
 
 @login_required
+def declaration_edit(request, pk):
+    """Beyan düzenle"""
+    if request.user.is_superuser:
+        return redirect('/admin/')
+
+    declaration = get_object_or_404(Declaration, pk=pk, praxis=request.user)
+
+    if request.method == 'POST':
+        # Form verilerini al
+        declaration.auftragsnummer = request.POST.get('auftragsnummer')
+        declaration.patient_name = request.POST.get('patient_name')
+        herstellungsdatum_str = request.POST.get('herstellungsdatum')
+
+        if herstellungsdatum_str:
+            try:
+                declaration.herstellungsdatum = datetime.strptime(herstellungsdatum_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+
+        declaration.save()
+
+        # Formset'leri işle
+        product_work_formset = ProductWorkFormSet(request.POST, instance=declaration, prefix='product_works')
+        material_formset = DeclarationItemFormSet(request.POST, instance=declaration, prefix='materials', user=request.user)
+
+        if product_work_formset.is_valid() and material_formset.is_valid():
+            # Mevcut product works'leri sil
+            declaration.product_works.all().delete()
+            # Yeni product works'leri kaydet
+            product_works = product_work_formset.save(commit=False)
+            for i, pw in enumerate(product_works, start=1):
+                pw.line_number = i
+                pw.save()
+
+            # Mevcut materials'ı sil
+            declaration.items.all().delete()
+            # Yeni materials'ı kaydet
+            items = material_formset.save(commit=False)
+            for i, item in enumerate(items, start=1):
+                item.line_number = i
+                item.save()
+
+            # PDF'i yeniden oluştur
+            try:
+                result = generate_declaration_pdf(declaration)
+                if result.get('drive_url'):
+                    declaration.pdf_url = result['drive_url']
+                    declaration.save()
+                    messages.success(request, f'Beyan {declaration.declaration_number} başarıyla güncellendi!')
+                else:
+                    messages.warning(request, 'Beyan güncellendi ama PDF yüklemesi başarısız oldu.')
+            except Exception as e:
+                messages.warning(request, f'Beyan güncellendi ama PDF hatası: {str(e)}')
+
+            return redirect('declaration_detail', pk=declaration.pk)
+        else:
+            messages.error(request, 'Formda hatalar var, lütfen kontrol edin.')
+    else:
+        # Edit için extra=0 kullan (boş satır ekleme)
+        ProductWorkFormSetEdit = forms.inlineformset_factory(
+            Declaration, ProductWork, form=ProductWorkForm,
+            extra=0, max_num=20, can_delete=True
+        )
+        DeclarationItemFormSetEdit = forms.inlineformset_factory(
+            Declaration, DeclarationItem, form=DeclarationItemForm,
+            formset=BaseDeclarationItemFormSet, extra=0, max_num=20, can_delete=True
+        )
+
+        product_work_formset = ProductWorkFormSetEdit(instance=declaration, prefix='product_works')
+        material_formset = DeclarationItemFormSetEdit(instance=declaration, prefix='materials', user=request.user)
+
+    # MaterialProduct'ları ve Hersteller Profile'ı gönder
+    material_products = MaterialProduct.objects.filter(user=request.user, is_active=True)
+
+    try:
+        hersteller_profile = request.user.hersteller_profile
+    except HerstellerProfile.DoesNotExist:
+        hersteller_profile = None
+
+    return render(request, 'declarations/declaration_edit.html', {
+        'declaration': declaration,
+        'product_work_formset': product_work_formset,
+        'material_formset': material_formset,
+        'material_products': material_products,
+        'hersteller_profile': hersteller_profile
+    })
+
+
+@login_required
 def declaration_detail(request, pk):
     """Beyan detay sayfası"""
     # Superuser admin sayfasına erişemez
     if request.user.is_superuser:
         return redirect('/admin/')
-    
+
     declaration = get_object_or_404(Declaration, pk=pk, praxis=request.user)
 
     # Hersteller profile bilgisini al

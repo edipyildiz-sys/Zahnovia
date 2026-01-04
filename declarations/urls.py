@@ -13,6 +13,7 @@ urlpatterns = [
     path('declarations/', views.declaration_list, name='declaration_list'),
     path('declarations/create/', views.declaration_create, name='declaration_create'),
     path('declarations/<int:pk>/', views.declaration_detail, name='declaration_detail'),
+    path('declarations/<int:pk>/edit/', views.declaration_edit, name='declaration_edit'),
 
     # Material Products
     path('material-products/', views.material_products_list, name='material_products_list'),

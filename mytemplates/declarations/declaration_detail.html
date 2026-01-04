@@ -11,9 +11,14 @@
             </h1>
             <p class="page-subtitle">{{ declaration.declaration_number }}</p>
         </div>
-        <a href="{% url 'declaration_list' %}" class="btn" style="background: #e2e8f0; color: #2d3748;">
-            <i class="fas fa-arrow-left"></i> Zurück
-        </a>
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'declaration_edit' declaration.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Bearbeiten
+            </a>
+            <a href="{% url 'declaration_list' %}" class="btn" style="background: #e2e8f0; color: #2d3748;">
+                <i class="fas fa-arrow-left"></i> Zurück
+            </a>
+        </div>
     </div>
 </div>
 
