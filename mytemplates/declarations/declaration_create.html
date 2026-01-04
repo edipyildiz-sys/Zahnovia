@@ -56,8 +56,10 @@
                        value="{{ hersteller_profile.verordnender_arzt|default:'' }}" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Auftragsnummer</label>
-                <input type="text" name="auftragsnummer" class="form-control" placeholder="Auftragsnummer">
+                <label class="form-label">Auftragsnummer *</label>
+                <input type="text" name="auftragsnummer" class="form-control" placeholder="Auftragsnummer" required
+                       oninvalid="this.setCustomValidity('Bitte füllen Sie dieses Feld aus')"
+                       oninput="this.setCustomValidity('')">
             </div>
             <div class="form-group">
                 <label class="form-label">Patientenname *</label>
@@ -155,7 +157,7 @@
         </div>
 
         <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0; display: flex; gap: 15px;">
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" id="submit-btn" class="btn btn-primary">
                 <i class="fas fa-save"></i> Erklärung Erstellen
             </button>
             <a href="{% url 'dashboard' %}" class="btn" style="background: #e2e8f0; color: #2d3748;">
@@ -307,6 +309,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!input.value) {
             input.value = 'Ja';
         }
+    });
+
+    // Form submit olduğunda butonu deaktif et
+    const form = document.getElementById('declaration-form');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', function(e) {
+        // Form validasyonunu kontrol et
+        if (!form.checkValidity()) {
+            return; // Validasyon hatası varsa submit'e izin verme
+        }
+
+        // Butonu deaktif et ve text'i değiştir
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Wird geladen...';
+        submitBtn.style.opacity = '0.6';
+        submitBtn.style.cursor = 'not-allowed';
     });
 });
 

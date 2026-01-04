@@ -73,10 +73,15 @@ def declaration_create(request):
     
     if request.method == 'POST':
         # Form verilerini al
-        auftragsnummer = request.POST.get('auftragsnummer')
-        patient_name = request.POST.get('patient_name')
+        auftragsnummer = request.POST.get('auftragsnummer', '').strip()
+        patient_name = request.POST.get('patient_name', '').strip()
         herstellungsdatum_str = request.POST.get('herstellungsdatum')
-        
+
+        # Auftragsnummer kontrolü
+        if not auftragsnummer:
+            messages.error(request, 'Auftragsnummer ist erforderlich!')
+            return redirect('declaration_create')
+
         # String'i date objesine çevir
         if herstellungsdatum_str:
             try:
@@ -85,7 +90,7 @@ def declaration_create(request):
                 herstellungsdatum = date.today()
         else:
             herstellungsdatum = date.today()
-        
+
         print(f"DEBUG - Herstellungsdatum from form: {herstellungsdatum_str}")
         print(f"DEBUG - Herstellungsdatum to save: {herstellungsdatum} (type: {type(herstellungsdatum)})")
 
@@ -223,9 +228,17 @@ def declaration_edit(request, pk):
 
     if request.method == 'POST':
         # Form verilerini al
-        declaration.auftragsnummer = request.POST.get('auftragsnummer')
-        declaration.patient_name = request.POST.get('patient_name')
+        auftragsnummer = request.POST.get('auftragsnummer', '').strip()
+        patient_name = request.POST.get('patient_name', '').strip()
         herstellungsdatum_str = request.POST.get('herstellungsdatum')
+
+        # Auftragsnummer kontrolü
+        if not auftragsnummer:
+            messages.error(request, 'Auftragsnummer ist erforderlich!')
+            return redirect('declaration_edit', pk=pk)
+
+        declaration.auftragsnummer = auftragsnummer
+        declaration.patient_name = patient_name
 
         if herstellungsdatum_str:
             try:
