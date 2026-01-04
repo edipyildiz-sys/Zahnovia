@@ -13,9 +13,9 @@ class ProductWorkForm(forms.ModelForm):
         model = ProductWork
         fields = ['produktbezeichnung_arbeit', 'zahnnummer', 'zahnfarbe']
         widgets = {
-            'produktbezeichnung_arbeit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'z.B. Krone, Brücke'}),
+            'produktbezeichnung_arbeit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'z.B. Krone, Brücke', 'required': 'required'}),
             'zahnnummer': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'z.B. 11, 21'}),
-            'zahnfarbe': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'z.B. A2, B1'}),
+            'zahnfarbe': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'z.B. A2, B1', 'required': 'required'}),
         }
 
 
@@ -35,7 +35,7 @@ class DeclarationItemForm(forms.ModelForm):
             'material': forms.TextInput(attrs={'class': 'form-control material-input', 'style': 'display:none;'}),
             'firma': forms.TextInput(attrs={'class': 'form-control firma-input', 'style': 'display:none;'}),
             'bestandteile': forms.TextInput(attrs={'class': 'form-control bestandteile-input', 'placeholder': 'Bestandteile'}),
-            'material_lot_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Lot No.'}),
+            'material_lot_no': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Lot No.', 'required': 'required'}),
             'ce_status': forms.TextInput(attrs={'class': 'form-control', 'value': 'Ja'}),
         }
 
