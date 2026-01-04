@@ -175,11 +175,11 @@ def declaration_create(request):
                 if result.get('drive_url'):
                     declaration.pdf_url = result['drive_url']
                     declaration.save()
-                    messages.success(request, f'Beyan {declaration.declaration_number} başarıyla oluşturuldu ve Google Drive\'a yüklendi!')
+                    messages.success(request, f'Erklärung {declaration.declaration_number} wurde erfolgreich erstellt und auf Google Drive hochgeladen!')
                 else:
-                    messages.warning(request, f'Beyan {declaration.declaration_number} oluşturuldu ama Google Drive yüklemesi başarısız oldu.')
+                    messages.warning(request, f'Erklärung {declaration.declaration_number} wurde erstellt, aber das Hochladen auf Google Drive ist fehlgeschlagen.')
             except Exception as e:
-                messages.warning(request, f'Beyan oluşturuldu ama PDF hatası: {str(e)}')
+                messages.warning(request, f'Erklärung wurde erstellt, aber PDF-Fehler: {str(e)}')
 
             return redirect('declaration_detail', pk=declaration.pk)
         else:
@@ -195,7 +195,7 @@ def declaration_create(request):
             print("Material Errors:", material_formset.errors)
             print("=" * 80)
 
-            messages.error(request, 'Formda hatalar var, lütfen kontrol edin.')
+            messages.error(request, 'Es gibt Fehler im Formular, bitte überprüfen Sie es.')
     else:
         # Boş bir declaration oluştur (geçici)
         declaration = Declaration(praxis=request.user)
@@ -359,15 +359,15 @@ def declaration_edit(request, pk):
                 if result.get('drive_url'):
                     declaration.pdf_url = result['drive_url']
                     declaration.save()
-                    messages.success(request, f'Beyan {declaration.declaration_number} başarıyla güncellendi ve PDF yenilendi!')
+                    messages.success(request, f'Erklärung {declaration.declaration_number} wurde erfolgreich aktualisiert und PDF erneuert!')
                 else:
-                    messages.warning(request, 'Beyan güncellendi ama PDF yüklemesi başarısız oldu.')
+                    messages.warning(request, 'Erklärung wurde aktualisiert, aber das Hochladen des PDFs ist fehlgeschlagen.')
             except Exception as e:
-                messages.warning(request, f'Beyan güncellendi ama PDF hatası: {str(e)}')
+                messages.warning(request, f'Erklärung wurde aktualisiert, aber PDF-Fehler: {str(e)}')
 
             return redirect('declaration_detail', pk=declaration.pk)
         else:
-            messages.error(request, 'Formda hatalar var, lütfen kontrol edin.')
+            messages.error(request, 'Es gibt Fehler im Formular, bitte überprüfen Sie es.')
     else:
         # Edit için extra=0 kullan (boş satır ekleme)
         ProductWorkFormSetEdit = forms.inlineformset_factory(
@@ -420,7 +420,7 @@ def declaration_delete(request, pk):
 
     declaration_number = declaration.declaration_number
     declaration.delete()
-    messages.success(request, f'Beyan {declaration_number} başarıyla silindi!')
+    messages.success(request, f'Erklärung {declaration_number} wurde erfolgreich gelöscht!')
     return redirect('declaration_list')
 
 
