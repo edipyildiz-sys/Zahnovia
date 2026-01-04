@@ -24,7 +24,7 @@ class DeclarationItemForm(forms.ModelForm):
     material_product = forms.ModelChoiceField(
         queryset=None,  # Will be set in __init__
         required=False,
-        empty_label="--- Malzeme Seçin ---",
+        empty_label="--- Produkt Wahlen ---",
         widget=forms.Select(attrs={'class': 'form-control material-product-select'})
     )
 
