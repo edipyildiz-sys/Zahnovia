@@ -307,23 +307,33 @@ def parse_declaration_pdf(pdf_file):
                 elementtyp = table_match.group(1).strip()
                 zahnnummer = table_match.group(2).strip()
 
+                # Materialfarbe'yi çıkar (Zahnfarbe için)
+                # Format: "Materialfarbe: 0M2 HT" veya "Materialfarbe: A2"
+                materialfarbe_match = re.search(r'Materialfarbe[:\s]*([A-Z0-9\s]+)', text, re.IGNORECASE)
+                zahnfarbe = materialfarbe_match.group(1).strip() if materialfarbe_match else ''
+
                 parsed_data['product_works'].append({
                     'produktbezeichnung_arbeit': elementtyp,  # Krone, Brücke, etc.
                     'zahnnummer': zahnnummer,  # 24, etc.
-                    'zahnfarbe': ''  # Dentsply'de zahnfarbe yok
+                    'zahnfarbe': zahnfarbe  # Materialfarbe -> Zahnfarbe
                 })
 
         # Materialien tablosunu çıkar
         # Dentsply Format:
         #   Werkstückname: CERECMTLZirconia
-        #   20260101-222705  <- Bu LOT NO (Material Lot No)
+        #   Lot-Nr.: 20260101-222705  <- Bu LOT NO (Material Lot No)
         #   Hersteller: DentsplySirona
         #   Materialname: CERECMTLZirconia
 
         # Material LOT NO çıkar
-        # Format: "20260101-222705" -> Sadece son 6 hane: "222705"
-        lot_no_match = re.search(r'\d{8}-(\d{6})', text)
-        material_lot_no = lot_no_match.group(1).strip() if lot_no_match else ''
+        # Önce "Lot-Nr" satırından almayı dene
+        lot_no_match = re.search(r'Lot-Nr[.:\s]*([A-Z0-9-]+)', text, re.IGNORECASE)
+        if lot_no_match:
+            material_lot_no = lot_no_match.group(1).strip()
+        else:
+            # Alternatif: Eski format "20260101-222705" -> Sadece son 6 hane: "222705"
+            lot_no_match2 = re.search(r'\d{8}-(\d{6})', text)
+            material_lot_no = lot_no_match2.group(1).strip() if lot_no_match2 else ''
 
         # Materialname ve Hersteller (boşluksuz format)
         materialname_match = re.search(r'Materialname[:\s]*([A-Za-z0-9]+)', text, re.IGNORECASE)
