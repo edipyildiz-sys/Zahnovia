@@ -308,9 +308,16 @@ def parse_declaration_pdf(pdf_file):
                 zahnnummer = table_match.group(2).strip()
 
                 # Materialfarbe'yi çıkar (Zahnfarbe için)
-                # Format: "Materialfarbe: 0M2 HT" veya "Materialfarbe: A2"
-                materialfarbe_match = re.search(r'Materialfarbe[:\s]*([A-Z0-9\s]+)', text, re.IGNORECASE)
-                zahnfarbe = materialfarbe_match.group(1).strip() if materialfarbe_match else ''
+                # Format: "Materialfarbe: A1" - Sadece ilk kelimeyi al (A1, 0M2, etc.)
+                # Satır sonu, boşluk veya başka bir büyük harfle biter
+                materialfarbe_match = re.search(r'Materialfarbe[:\s]*([A-Z0-9]+(?:\s+[A-Z0-9]+)?)', text, re.IGNORECASE)
+                if materialfarbe_match:
+                    # İlk kelimeyi al, sonraki karakterlerden önce kes
+                    zahnfarbe = materialfarbe_match.group(1).strip()
+                    # Eğer sonunda harf+rakam dışı karakter varsa kes
+                    zahnfarbe = re.split(r'(?<=[A-Z0-9])[A-Z][a-z]', zahnfarbe)[0].strip()
+                else:
+                    zahnfarbe = ''
 
                 parsed_data['product_works'].append({
                     'produktbezeichnung_arbeit': elementtyp,  # Krone, Brücke, etc.
@@ -326,32 +333,45 @@ def parse_declaration_pdf(pdf_file):
         #   Materialname: CERECMTLZirconia
 
         # Material LOT NO çıkar
-        # Önce "Lot-Nr" satırından almayı dene
-        lot_no_match = re.search(r'Lot-Nr[.:\s]*([A-Z0-9-]+)', text, re.IGNORECASE)
+        # "LOT-Nummer: YBDFLC" formatı
+        lot_no_match = re.search(r'LOT-Nummer[:\s]*([A-Z0-9]+)', text, re.IGNORECASE)
         if lot_no_match:
             material_lot_no = lot_no_match.group(1).strip()
         else:
-            # Alternatif: Eski format "20260101-222705" -> Sadece son 6 hane: "222705"
-            lot_no_match2 = re.search(r'\d{8}-(\d{6})', text)
-            material_lot_no = lot_no_match2.group(1).strip() if lot_no_match2 else ''
+            # Alternatif: "Lot-Nr.: 20260101-222705" formatı
+            lot_no_match2 = re.search(r'Lot-Nr[.:\s]*([A-Z0-9-]+)', text, re.IGNORECASE)
+            if lot_no_match2:
+                material_lot_no = lot_no_match2.group(1).strip()
+            else:
+                # Son alternatif: Eski format "20260101-222705" -> Sadece son 6 hane: "222705"
+                lot_no_match3 = re.search(r'\d{8}-(\d{6})', text)
+                material_lot_no = lot_no_match3.group(1).strip() if lot_no_match3 else ''
 
-        # Materialname ve Hersteller (boşluksuz format)
-        materialname_match = re.search(r'Materialname[:\s]*([A-Za-z0-9]+)', text, re.IGNORECASE)
-        hersteller_match = re.search(r'Hersteller[:\s]*([A-Za-z]+)', text, re.IGNORECASE)
+        # Materialname ve Hersteller
+        # Materialname: "IPS e.max ZirCAD MT Multi" - Boşlukları da kabul et
+        # Satır sonuna kadar veya "Materialklasse:" gibi bir başlığa kadar oku
+        materialname_match = re.search(r'Materialname[:\s]*([A-Za-z0-9.\s]+?)(?:\n|Materialklasse|Hersteller|$)', text, re.IGNORECASE)
+        hersteller_match = re.search(r'Hersteller[:\s]*([A-Za-z\s]+?)(?:\n|Materialname|$)', text, re.IGNORECASE)
 
         if materialname_match:
-            # Material adını düzenle: "CERECMTLZirconia" → "CEREC MTL Zirconia"
+            # Material adını al - artık boşluklu geldiği için düzenlemeye gerek yok
             material_name = materialname_match.group(1).strip()
-            # CEREC, MTL, Zirconia gibi kelimeleri ayır
-            material_name = re.sub(r'([A-Z][a-z]+)', r' \1', material_name).strip()
-            material_name = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', material_name).strip()
 
-            # Hersteller adını düzenle: "DentsplySirona" → "Dentsply Sirona"
-            firma_name = 'Dentsply Sirona'
+            # Eğer boşluksuz format gelirse (eski PDF'ler için) düzenle
+            if ' ' not in material_name and len(material_name) > 10:
+                # "CERECMTLZirconia" → "CEREC MTL Zirconia"
+                material_name = re.sub(r'([A-Z][a-z]+)', r' \1', material_name).strip()
+                material_name = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', material_name).strip()
+
+            # Hersteller adını al
+            firma_name = 'Ivoclar'  # Default
             if hersteller_match:
                 firma_raw = hersteller_match.group(1).strip()
-                # DentsplySirona → Dentsply Sirona
-                firma_name = re.sub(r'([a-z])([A-Z])', r'\1 \2', firma_raw)
+                # Boşluksuz format varsa düzenle: "DentsplySirona" → "Dentsply Sirona"
+                if ' ' not in firma_raw:
+                    firma_name = re.sub(r'([a-z])([A-Z])', r'\1 \2', firma_raw)
+                else:
+                    firma_name = firma_raw
 
             material_data = {
                 'material': material_name,
