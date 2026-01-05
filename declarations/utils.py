@@ -372,6 +372,8 @@ def parse_declaration_pdf(pdf_file):
             material_name = material_name.replace('IPSe.max', 'IPS e.max')
             material_name = material_name.replace('IP Se.max', 'IPS e.max')
             material_name = material_name.replace('IP S e.max', 'IPS e.max')
+            # "e.maxZirCAD" → "e.max ZirCAD" (boşluk ekleme)
+            material_name = material_name.replace('e.maxZirCAD', 'e.max ZirCAD')
             # "ZirCADMT" veya "MTMulti" → "ZirCAD MT" ve "MT Multi"
             material_name = material_name.replace('ZirCADMT', 'ZirCAD MT')
             material_name = material_name.replace('MTMulti', 'MT Multi')
