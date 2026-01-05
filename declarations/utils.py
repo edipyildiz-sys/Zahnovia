@@ -368,11 +368,13 @@ def parse_declaration_pdf(pdf_file):
             print(f"DEBUG: Material name parsed: '{material_name}'")
 
             # Bilinen materyallerdeki boşluk hatalarını düzelt
-            # "IP Se.max" → "IPS e.max"
+            # "IPSe.max" veya "IP Se.max" → "IPS e.max"
+            material_name = material_name.replace('IPSe.max', 'IPS e.max')
             material_name = material_name.replace('IP Se.max', 'IPS e.max')
             material_name = material_name.replace('IP S e.max', 'IPS e.max')
-            # "ZirCADMT" → "ZirCAD MT"
+            # "ZirCADMT" veya "MTMulti" → "ZirCAD MT" ve "MT Multi"
             material_name = material_name.replace('ZirCADMT', 'ZirCAD MT')
+            material_name = material_name.replace('MTMulti', 'MT Multi')
 
             # Eğer boşluksuz format gelirse (eski PDF'ler için) düzenle
             if ' ' not in material_name and len(material_name) > 10:
