@@ -531,7 +531,7 @@ function fillFormWithParsedData(data) {
                         if (materialProductSelect) {
                             const newOption = document.createElement('option');
                             newOption.value = '';  // Empty value, kullanıcı elle oluşturmalı
-                            newOption.text = `${material.material} - ${material.firma} (PDF'den)`;
+                            newOption.text = `${material.material} - ${material.firma}`;
                             newOption.selected = true;
                             materialProductSelect.add(newOption);
                         }
