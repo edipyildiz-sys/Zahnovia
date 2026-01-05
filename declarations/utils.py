@@ -351,14 +351,28 @@ def parse_declaration_pdf(pdf_file):
 
         # Materialname ve Hersteller
         # Materialname: "IPS e.max ZirCAD MT Multi" - Boşlukları da kabul et
-        # Nokta, tire, boşluk ve alfanumerik karakterleri kabul et
-        # Satır sonuna kadar veya başka bir başlığa kadar oku
-        materialname_match = re.search(r'Materialname[:\s]*([A-Za-z0-9.\-\s]+?)(?:\s*\n|Materialklasse|Materialfarbe|LOT-Nummer|Hersteller|$)', text, re.IGNORECASE)
-        hersteller_match = re.search(r'Hersteller[:\s]*([A-Za-z\s]+?)(?:\s*\n|Materialname|Materialklasse|$)', text, re.IGNORECASE)
+        # Satır sonuna kadar al, sonra temizle
+        materialname_match = re.search(r'Materialname[:\s]*(.+?)(?:\n|$)', text, re.IGNORECASE)
+        hersteller_match = re.search(r'Hersteller[:\s]*(.+?)(?:\n|$)', text, re.IGNORECASE)
 
         if materialname_match:
-            # Material adını al - artık boşluklu geldiği için düzenlemeye gerek yok
+            # Material adını al
             material_name = materialname_match.group(1).strip()
+
+            # Eğer satırda başka başlıklar varsa kes (Materialklasse, etc.)
+            for stop_word in ['Materialklasse', 'Materialfarbe', 'LOT-Nummer', 'Hersteller', 'Werkstückgröße']:
+                if stop_word in material_name:
+                    material_name = material_name.split(stop_word)[0].strip()
+
+            # Debug: Material name'i logla
+            print(f"DEBUG: Material name parsed: '{material_name}'")
+
+            # Bilinen materyallerdeki boşluk hatalarını düzelt
+            # "IP Se.max" → "IPS e.max"
+            material_name = material_name.replace('IP Se.max', 'IPS e.max')
+            material_name = material_name.replace('IP S e.max', 'IPS e.max')
+            # "ZirCADMT" → "ZirCAD MT"
+            material_name = material_name.replace('ZirCADMT', 'ZirCAD MT')
 
             # Eğer boşluksuz format gelirse (eski PDF'ler için) düzenle
             if ' ' not in material_name and len(material_name) > 10:
