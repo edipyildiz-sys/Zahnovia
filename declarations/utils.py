@@ -308,22 +308,18 @@ def parse_declaration_pdf(pdf_file):
                 zahnnummer = table_match.group(2).strip()
 
                 # Materialfarbe'yi çıkar (Zahnfarbe için)
-                # Format: "Materialfarbe: A1" veya "Materialfarbe: 0M2 HT"
-                # Sadece zahnfarbe kodunu al, sonraki kelimeleri (Vergr, etc.) alma
-                materialfarbe_match = re.search(r'Materialfarbe[:\s]*([A-Z0-9]+(?:\s+[A-Z0-9]+)?)', text, re.IGNORECASE)
+                # Format: "Materialfarbe: A1" - Sadece 2-4 karakterlik alfanumerik kod
+                # Zahnfarbe genelde: A1, A2, B1, 0M2, etc. (max 4 karakter)
+                materialfarbe_match = re.search(r'Materialfarbe[:\s]*([A-Z0-9]{1,4})(?:\s|[a-z]|$)', text, re.IGNORECASE)
                 if materialfarbe_match:
-                    zahnfarbe_raw = materialfarbe_match.group(1).strip()
-                    # "A1Vergr" gibi birleşik gelirse, büyük harfle başlayan kelimeyi kes
-                    # A1 veya 0M2 gibi format: rakam+harf veya harf+rakam kombinasyonu
-                    zahnfarbe_clean = re.match(r'([A-Z0-9]+(?:\s+[A-Z0-9]+)?)', zahnfarbe_raw)
-                    if zahnfarbe_clean:
-                        zahnfarbe = zahnfarbe_clean.group(1).strip()
-                        # Eğer sonunda küçük harfle başlayan kelime varsa kes (Vergr gibi)
-                        zahnfarbe = re.split(r'(?<=[0-9])(?=[A-Z][a-z])|(?<=[A-Z])(?=[A-Z][a-z][a-z])', zahnfarbe)[0].strip()
-                    else:
-                        zahnfarbe = zahnfarbe_raw
+                    zahnfarbe = materialfarbe_match.group(1).strip()
                 else:
-                    zahnfarbe = ''
+                    # Alternatif: Boşlukla ayrılmış format (0M2 HT gibi)
+                    materialfarbe_match2 = re.search(r'Materialfarbe[:\s]*([A-Z0-9]+\s+[A-Z0-9]+)', text, re.IGNORECASE)
+                    if materialfarbe_match2:
+                        zahnfarbe = materialfarbe_match2.group(1).strip()
+                    else:
+                        zahnfarbe = ''
 
                 parsed_data['product_works'].append({
                     'produktbezeichnung_arbeit': elementtyp,  # Krone, Brücke, etc.
@@ -355,9 +351,10 @@ def parse_declaration_pdf(pdf_file):
 
         # Materialname ve Hersteller
         # Materialname: "IPS e.max ZirCAD MT Multi" - Boşlukları da kabul et
-        # Satır sonuna kadar veya "Materialklasse:" gibi bir başlığa kadar oku
-        materialname_match = re.search(r'Materialname[:\s]*([A-Za-z0-9.\s]+?)(?:\n|Materialklasse|Hersteller|$)', text, re.IGNORECASE)
-        hersteller_match = re.search(r'Hersteller[:\s]*([A-Za-z\s]+?)(?:\n|Materialname|$)', text, re.IGNORECASE)
+        # Nokta, tire, boşluk ve alfanumerik karakterleri kabul et
+        # Satır sonuna kadar veya başka bir başlığa kadar oku
+        materialname_match = re.search(r'Materialname[:\s]*([A-Za-z0-9.\-\s]+?)(?:\s*\n|Materialklasse|Materialfarbe|LOT-Nummer|Hersteller|$)', text, re.IGNORECASE)
+        hersteller_match = re.search(r'Hersteller[:\s]*([A-Za-z\s]+?)(?:\s*\n|Materialname|Materialklasse|$)', text, re.IGNORECASE)
 
         if materialname_match:
             # Material adını al - artık boşluklu geldiği için düzenlemeye gerek yok
