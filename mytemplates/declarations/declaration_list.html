@@ -69,6 +69,24 @@
         background: #c82333;
         transform: scale(1.05);
     }
+    .search-box {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #f7fafc;
+        border-radius: 8px;
+    }
+    .search-input {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+    }
+    .search-input:focus {
+        border-color: #17a2b8;
+        outline: none;
+    }
 </style>
 {% endblock %}
 
@@ -89,6 +107,13 @@
 
 <div class="card">
     {% if declarations %}
+    <!-- Arama Kutusu -->
+    <div class="search-box">
+        <div style="position: relative;">
+            <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #a0aec0;"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Auftragsnummer oder Patientenname suchen..." style="padding-left: 45px;">
+        </div>
+    </div>
     <table class="table">
         <thead>
             <tr>
@@ -154,4 +179,31 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+// Arama fonksiyonu
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const tableRows = document.querySelectorAll('tbody tr');
+
+            tableRows.forEach(row => {
+                // Patientenname (2. sütun) ve Auftragsnummer (3. sütun) al
+                const patientName = row.cells[1].textContent.toLowerCase();
+                const auftragsnummer = row.cells[2].textContent.toLowerCase();
+
+                // Arama terimini her iki alanda da ara
+                if (patientName.includes(searchTerm) || auftragsnummer.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
 {% endblock %}
