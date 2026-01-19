@@ -6,6 +6,19 @@ urlpatterns = [
     path('login/', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
 
+    # Registration & Email Verification
+    path('register/', views.user_register, name='register'),
+    path('verify-email/<str:token>/', views.verify_email, name='verify_email'),
+
+    # Password Reset
+    path('password-reset/', views.password_reset_request, name='password_reset'),
+    path('password-reset/done/', views.password_reset_done, name='password_reset_done'),
+    path('password-reset/<str:uidb64>/<str:token>/', views.password_reset_confirm, name='password_reset_confirm'),
+    path('password-reset/complete/', views.password_reset_complete, name='password_reset_complete'),
+
+    # Profile
+    path('profile/edit/', views.profile_edit, name='profile_edit'),
+
     # Dashboard
     path('', views.dashboard, name='dashboard'),
 

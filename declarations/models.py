@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class HerstellerProfile(models.Model):
@@ -8,17 +10,25 @@ class HerstellerProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='hersteller_profile')
 
     # Firma bilgileri
-    firma_name = models.CharField(max_length=200, verbose_name="Firma Adı")
-    strasse = models.CharField(max_length=200, verbose_name="Straße")
-    plz = models.CharField(max_length=10, verbose_name="PLZ")
-    ort = models.CharField(max_length=100, verbose_name="Ort")
+    firma_name = models.CharField(max_length=200, verbose_name="Firma Adı", blank=True)
+    strasse = models.CharField(max_length=200, verbose_name="Straße", blank=True)
+    plz = models.CharField(max_length=10, verbose_name="PLZ", blank=True)
+    ort = models.CharField(max_length=100, verbose_name="Ort", blank=True)
 
     # İletişim bilgileri
-    telefon = models.CharField(max_length=50, verbose_name="Telefon")
-    email = models.EmailField(verbose_name="E-Mail")
+    telefon = models.CharField(max_length=50, verbose_name="Telefon", blank=True)
+    email = models.EmailField(verbose_name="E-Mail", blank=True)
 
     # Verordnender Arzt
     verordnender_arzt = models.CharField(max_length=200, verbose_name="Verordnender Arzt", blank=True)
+
+    # Email doğrulama alanları
+    email_verified = models.BooleanField(default=False, verbose_name="E-Mail bestätigt")
+    verification_token = models.CharField(max_length=100, blank=True)
+    token_created_at = models.DateTimeField(null=True, blank=True)
+
+    # Profil tamamlandı mı?
+    profile_completed = models.BooleanField(default=False, verbose_name="Profil vollständig")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -198,3 +208,20 @@ class ArchiveDocument(models.Model):
         if self.custom_category:
             return self.custom_category
         return self.get_category_display()
+
+
+# Signals - Kullanıcı oluşturulduğunda otomatik profil oluştur
+@receiver(post_save, sender=User)
+def create_hersteller_profile(sender, instance, created, **kwargs):
+    """Yeni kullanıcı oluşturulduğunda HerstellerProfile oluştur"""
+    if created:
+        # Superuser için profil oluşturma
+        if not instance.is_superuser:
+            HerstellerProfile.objects.get_or_create(user=instance)
+
+
+@receiver(post_save, sender=User)
+def save_hersteller_profile(sender, instance, **kwargs):
+    """Kullanıcı kaydedildiğinde profili de kaydet"""
+    if not instance.is_superuser and hasattr(instance, 'hersteller_profile'):
+        instance.hersteller_profile.save()

@@ -1,5 +1,7 @@
 from django import forms
-from .models import Declaration, DeclarationItem, ProductWork, MaterialProduct
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from .models import Declaration, DeclarationItem, ProductWork, MaterialProduct, HerstellerProfile
 
 
 class DeclarationForm(forms.ModelForm):
@@ -76,3 +78,212 @@ DeclarationItemFormSet = forms.inlineformset_factory(
     max_num=20,  # Maksimum 20 satır
     can_delete=True  # Silme butonu olacak
 )
+
+
+# ============== KAYIT FORMLARI ==============
+
+class RegistrationForm(forms.Form):
+    """Kullanıcı kayıt formu"""
+
+    # Kullanıcı bilgileri
+    username = forms.CharField(
+        max_length=150,
+        label="Benutzername",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Benutzername',
+            'autocomplete': 'username'
+        })
+    )
+
+    email = forms.EmailField(
+        label="E-Mail",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'ihre@email.de',
+            'autocomplete': 'email'
+        })
+    )
+
+    first_name = forms.CharField(
+        max_length=150,
+        label="Vorname",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Vorname',
+            'autocomplete': 'given-name'
+        })
+    )
+
+    last_name = forms.CharField(
+        max_length=150,
+        label="Nachname",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Nachname',
+            'autocomplete': 'family-name'
+        })
+    )
+
+    # Şifre
+    password = forms.CharField(
+        min_length=8,
+        label="Passwort",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Mindestens 8 Zeichen',
+            'autocomplete': 'new-password'
+        })
+    )
+
+    password_confirm = forms.CharField(
+        min_length=8,
+        label="Passwort bestätigen",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Passwort wiederholen',
+            'autocomplete': 'new-password'
+        })
+    )
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError('Dieser Benutzername ist bereits vergeben.')
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError('Diese E-Mail-Adresse ist bereits registriert.')
+        return email
+
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        # Django şifre doğrulama
+        try:
+            validate_password(password)
+        except forms.ValidationError as e:
+            raise forms.ValidationError(e.messages)
+        return password
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        password_confirm = cleaned_data.get('password_confirm')
+
+        if password and password_confirm and password != password_confirm:
+            raise forms.ValidationError('Die Passwörter stimmen nicht überein.')
+
+        return cleaned_data
+
+
+class PasswordResetRequestForm(forms.Form):
+    """Şifre sıfırlama istek formu"""
+
+    email = forms.EmailField(
+        label="E-Mail",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ihre registrierte E-Mail-Adresse',
+            'autocomplete': 'email'
+        })
+    )
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not User.objects.filter(email=email).exists():
+            raise forms.ValidationError('Es gibt kein Konto mit dieser E-Mail-Adresse.')
+        return email
+
+
+class PasswordResetConfirmForm(forms.Form):
+    """Yeni şifre belirleme formu"""
+
+    password = forms.CharField(
+        min_length=8,
+        label="Neues Passwort",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Mindestens 8 Zeichen',
+            'autocomplete': 'new-password'
+        })
+    )
+
+    password_confirm = forms.CharField(
+        min_length=8,
+        label="Passwort bestätigen",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Passwort wiederholen',
+            'autocomplete': 'new-password'
+        })
+    )
+
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        try:
+            validate_password(password)
+        except forms.ValidationError as e:
+            raise forms.ValidationError(e.messages)
+        return password
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        password_confirm = cleaned_data.get('password_confirm')
+
+        if password and password_confirm and password != password_confirm:
+            raise forms.ValidationError('Die Passwörter stimmen nicht überein.')
+
+        return cleaned_data
+
+
+class HerstellerProfileForm(forms.ModelForm):
+    """Profil düzenleme formu"""
+
+    class Meta:
+        model = HerstellerProfile
+        fields = ['firma_name', 'strasse', 'plz', 'ort', 'telefon', 'verordnender_arzt']
+        widgets = {
+            'firma_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Firmenname',
+                'required': 'required'
+            }),
+            'strasse': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Straße und Hausnummer',
+                'required': 'required'
+            }),
+            'plz': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'PLZ',
+                'required': 'required'
+            }),
+            'ort': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ort',
+                'required': 'required'
+            }),
+            'telefon': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Telefonnummer',
+                'required': 'required'
+            }),
+            'verordnender_arzt': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Name des verordnenden Arztes',
+                'required': 'required'
+            }),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        required_fields = ['firma_name', 'strasse', 'plz', 'ort', 'telefon', 'verordnender_arzt']
+
+        for field in required_fields:
+            if not cleaned_data.get(field):
+                self.add_error(field, 'Dieses Feld ist erforderlich.')
+
+        return cleaned_data

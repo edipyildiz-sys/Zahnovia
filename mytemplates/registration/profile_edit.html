@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil bearbeiten - Zahnovia</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .profile-container {
+            background: white;
+            padding: 40px 50px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .profile-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #17a2b8;
+            margin-bottom: 10px;
+        }
+
+        .profile-subtitle {
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .required-notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .required-notice i {
+            color: #ffc107;
+            font-size: 20px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .required-notice p {
+            color: #856404;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #17a2b8;
+        }
+
+        .btn-save {
+            width: 100%;
+            padding: 14px;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-save:hover {
+            background: #138496;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(23, 162, 184, 0.3);
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .icon-input {
+            position: relative;
+        }
+
+        .icon-input i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #718096;
+        }
+
+        .icon-input input {
+            padding-left: 42px;
+        }
+
+        .field-error {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #718096;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .back-link a:hover {
+            color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <div class="profile-header">
+            <div class="profile-title">
+                <i class="fas fa-user-cog"></i> Profil bearbeiten
+            </div>
+            <div class="profile-subtitle">Hersteller-Informationen</div>
+        </div>
+
+        {% if profile_required %}
+        <div class="required-notice">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Bitte fullen Sie Ihr Profil aus, um Zahnovia nutzen zu konnen.</p>
+        </div>
+        {% endif %}
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">
+            {% for error in form.non_field_errors %}
+            {{ error }}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" novalidate>
+            {% csrf_token %}
+
+            <div class="section-title"><i class="fas fa-building"></i> Firmeninformationen</div>
+
+            <div class="form-group">
+                <label class="form-label">Firmenname *</label>
+                <div class="icon-input">
+                    <i class="fas fa-building"></i>
+                    <input type="text" name="firma_name" class="form-control"
+                           value="{{ form.firma_name.value|default:'' }}" required>
+                </div>
+                {% if form.firma_name.errors %}
+                <div class="field-error">{{ form.firma_name.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Strasse *</label>
+                <div class="icon-input">
+                    <i class="fas fa-road"></i>
+                    <input type="text" name="strasse" class="form-control"
+                           value="{{ form.strasse.value|default:'' }}" required>
+                </div>
+                {% if form.strasse.errors %}
+                <div class="field-error">{{ form.strasse.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">PLZ *</label>
+                    <div class="icon-input">
+                        <i class="fas fa-map-pin"></i>
+                        <input type="text" name="plz" class="form-control"
+                               value="{{ form.plz.value|default:'' }}" required>
+                    </div>
+                    {% if form.plz.errors %}
+                    <div class="field-error">{{ form.plz.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ort *</label>
+                    <div class="icon-input">
+                        <i class="fas fa-city"></i>
+                        <input type="text" name="ort" class="form-control"
+                               value="{{ form.ort.value|default:'' }}" required>
+                    </div>
+                    {% if form.ort.errors %}
+                    <div class="field-error">{{ form.ort.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="section-title"><i class="fas fa-address-book"></i> Kontaktinformationen</div>
+
+            <div class="form-group">
+                <label class="form-label">Telefon *</label>
+                <div class="icon-input">
+                    <i class="fas fa-phone"></i>
+                    <input type="tel" name="telefon" class="form-control"
+                           value="{{ form.telefon.value|default:'' }}" required>
+                </div>
+                {% if form.telefon.errors %}
+                <div class="field-error">{{ form.telefon.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">E-Mail</label>
+                <div class="icon-input">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" class="form-control" value="{{ user_email }}" disabled readonly
+                           style="background-color: #f8f9fa; cursor: not-allowed;">
+                </div>
+                <small style="color: #718096; font-size: 12px;">Die E-Mail-Adresse kann nicht geandert werden.</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Verordnender Arzt *</label>
+                <div class="icon-input">
+                    <i class="fas fa-user-md"></i>
+                    <input type="text" name="verordnender_arzt" class="form-control"
+                           value="{{ form.verordnender_arzt.value|default:'' }}" required>
+                </div>
+                {% if form.verordnender_arzt.errors %}
+                <div class="field-error">{{ form.verordnender_arzt.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn-save">
+                <i class="fas fa-save"></i> Profil speichern
+            </button>
+        </form>
+
+        {% if not profile_required %}
+        <div class="back-link">
+            <a href="{% url 'dashboard' %}"><i class="fas fa-arrow-left"></i> Zuruck zum Dashboard</a>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

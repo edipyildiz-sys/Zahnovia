@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrierung - Zahnovia</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: white;
+            padding: 40px 50px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .register-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #17a2b8;
+            margin-bottom: 10px;
+        }
+
+        .register-subtitle {
+            color: #718096;
+            font-size: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #17a2b8;
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 14px;
+            background: #17a2b8;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-register:hover {
+            background: #138496;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(23, 162, 184, 0.3);
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+
+        .icon-input {
+            position: relative;
+        }
+
+        .icon-input i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #718096;
+        }
+
+        .icon-input input {
+            padding-left: 42px;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .login-link a {
+            color: #17a2b8;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .error-list li {
+            margin-bottom: 5px;
+        }
+
+        .field-error {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .password-hint {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <div class="register-title">
+                <i class="fas fa-tooth"></i> Zahnovia
+            </div>
+            <div class="register-subtitle">Neues Konto erstellen</div>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% else %}alert-warning{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">
+            <ul class="error-list">
+            {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="POST" novalidate>
+            {% csrf_token %}
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Vorname *</label>
+                    <div class="icon-input">
+                        <i class="fas fa-user"></i>
+                        <input type="text" name="first_name" class="form-control"
+                               value="{{ form.first_name.value|default:'' }}" required>
+                    </div>
+                    {% if form.first_name.errors %}
+                    <div class="field-error">{{ form.first_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Nachname *</label>
+                    <div class="icon-input">
+                        <i class="fas fa-user"></i>
+                        <input type="text" name="last_name" class="form-control"
+                               value="{{ form.last_name.value|default:'' }}" required>
+                    </div>
+                    {% if form.last_name.errors %}
+                    <div class="field-error">{{ form.last_name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Benutzername *</label>
+                <div class="icon-input">
+                    <i class="fas fa-at"></i>
+                    <input type="text" name="username" class="form-control"
+                           value="{{ form.username.value|default:'' }}" required autocomplete="username">
+                </div>
+                {% if form.username.errors %}
+                <div class="field-error">{{ form.username.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">E-Mail *</label>
+                <div class="icon-input">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" name="email" class="form-control"
+                           value="{{ form.email.value|default:'' }}" required autocomplete="email">
+                </div>
+                {% if form.email.errors %}
+                <div class="field-error">{{ form.email.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Passwort *</label>
+                <div class="icon-input">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="password" class="form-control" required autocomplete="new-password">
+                </div>
+                <div class="password-hint">Mindestens 8 Zeichen, nicht nur Zahlen</div>
+                {% if form.password.errors %}
+                <div class="field-error">{{ form.password.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Passwort bestatigen *</label>
+                <div class="icon-input">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="password_confirm" class="form-control" required autocomplete="new-password">
+                </div>
+                {% if form.password_confirm.errors %}
+                <div class="field-error">{{ form.password_confirm.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn-register">
+                <i class="fas fa-user-plus"></i> Registrieren
+            </button>
+        </form>
+
+        <div class="login-link">
+            Haben Sie bereits ein Konto? <a href="{% url 'login' %}">Anmelden</a>
+        </div>
+    </div>
+</body>
+</html>

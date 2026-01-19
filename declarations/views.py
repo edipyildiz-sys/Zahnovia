@@ -1,14 +1,26 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib import messages
 from django.http import HttpResponse, FileResponse, Http404, JsonResponse
-from datetime import date, datetime
+from django.utils.crypto import get_random_string
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.utils import timezone
+from django.conf import settings
+from datetime import date, datetime, timedelta
 from django.db.models import Q
 from django import forms
 from .models import Declaration, DeclarationItem, MaterialProduct, HerstellerProfile, ProductWork, ArchiveDocument
-from .forms import DeclarationItemFormSet, ProductWorkFormSet, DeclarationItemForm, ProductWorkForm, BaseDeclarationItemFormSet
+from .forms import (
+    DeclarationItemFormSet, ProductWorkFormSet, DeclarationItemForm, ProductWorkForm,
+    BaseDeclarationItemFormSet, RegistrationForm, PasswordResetRequestForm,
+    PasswordResetConfirmForm, HerstellerProfileForm
+)
 from .utils import generate_declaration_pdf, parse_declaration_pdf
+from .services.email_service import RegistrationEmailService, PasswordResetEmailService
 from django.views.decorators.http import require_POST
 
 
@@ -734,3 +746,213 @@ def parse_reference_pdf(request):
     print("=" * 80)
 
     return JsonResponse(parsed_data)
+
+
+# ===== KAYIT VE DOĞRULAMA VIEWS =====
+
+def user_register(request):
+    """Kullanıcı kayıt view'ı"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            # Kullanıcı oluştur
+            user = User.objects.create_user(
+                username=form.cleaned_data['username'],
+                email=form.cleaned_data['email'],
+                password=form.cleaned_data['password'],
+                first_name=form.cleaned_data['first_name'],
+                last_name=form.cleaned_data['last_name'],
+                is_active=False  # Email doğrulanana kadar aktif değil
+            )
+
+            # Profil oluştur (signal ile otomatik oluşturulabilir ama burada güncelliyoruz)
+            profile, created = HerstellerProfile.objects.get_or_create(user=user)
+
+            # Doğrulama token'ı oluştur
+            token = get_random_string(64)
+            profile.verification_token = token
+            profile.token_created_at = timezone.now()
+            profile.save()
+
+            # Doğrulama URL'i oluştur
+            verification_url = f"{settings.SITE_URL}/verify-email/{token}/"
+
+            # Email gönder
+            email_sent = RegistrationEmailService.send_verification_email(user, profile, verification_url)
+
+            if email_sent:
+                # Admin'e bildirim gönder
+                RegistrationEmailService.send_admin_notification(user, profile)
+                messages.success(
+                    request,
+                    'Registrierung erfolgreich! Bitte überprüfen Sie Ihre E-Mail und klicken Sie auf den Bestätigungslink.'
+                )
+            else:
+                messages.warning(
+                    request,
+                    'Registrierung erfolgreich, aber E-Mail konnte nicht gesendet werden. Bitte kontaktieren Sie den Support.'
+                )
+
+            return redirect('login')
+    else:
+        form = RegistrationForm()
+
+    return render(request, 'registration/register.html', {'form': form})
+
+
+def verify_email(request, token):
+    """Email doğrulama view'ı"""
+    try:
+        profile = HerstellerProfile.objects.get(verification_token=token)
+
+        # Token süresi kontrolü (24 saat)
+        if profile.token_created_at:
+            token_age = timezone.now() - profile.token_created_at
+            if token_age > timedelta(hours=24):
+                messages.error(request, 'Der Bestätigungslink ist abgelaufen. Bitte registrieren Sie sich erneut.')
+                return redirect('register')
+
+        # Email'i doğrula ve kullanıcıyı aktif et
+        profile.email_verified = True
+        profile.verification_token = ''  # Token'ı temizle
+        profile.save()
+
+        # Kullanıcıyı aktif et
+        user = profile.user
+        user.is_active = True
+        user.save()
+
+        messages.success(
+            request,
+            'E-Mail erfolgreich bestätigt! Sie können sich jetzt anmelden. Bitte füllen Sie zuerst Ihr Profil aus.'
+        )
+        return redirect('login')
+
+    except HerstellerProfile.DoesNotExist:
+        messages.error(request, 'Ungültiger Bestätigungslink.')
+        return redirect('login')
+
+
+def password_reset_request(request):
+    """Şifre sıfırlama isteği view'ı"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = PasswordResetRequestForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            user = User.objects.get(email=email)
+
+            # Token oluştur
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+            # Reset URL'i oluştur
+            reset_url = f"{settings.SITE_URL}/password-reset/{uid}/{token}/"
+
+            # Email gönder
+            email_sent = PasswordResetEmailService.send_password_reset_email(user, reset_url)
+
+            if email_sent:
+                messages.success(
+                    request,
+                    'Eine E-Mail mit Anweisungen zum Zurücksetzen Ihres Passworts wurde gesendet.'
+                )
+            else:
+                messages.error(
+                    request,
+                    'E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.'
+                )
+
+            return redirect('password_reset_done')
+    else:
+        form = PasswordResetRequestForm()
+
+    return render(request, 'registration/password_reset_request.html', {'form': form})
+
+
+def password_reset_done(request):
+    """Şifre sıfırlama email gönderildi view'ı"""
+    return render(request, 'registration/password_reset_done.html')
+
+
+def password_reset_confirm(request, uidb64, token):
+    """Şifre sıfırlama onay view'ı"""
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    # Token geçerliliğini kontrol et
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            form = PasswordResetConfirmForm(request.POST)
+            if form.is_valid():
+                # Yeni şifreyi kaydet
+                user.set_password(form.cleaned_data['password'])
+                user.save()
+
+                messages.success(
+                    request,
+                    'Ihr Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt anmelden.'
+                )
+                return redirect('password_reset_complete')
+        else:
+            form = PasswordResetConfirmForm()
+
+        return render(request, 'registration/password_reset_confirm.html', {
+            'form': form,
+            'validlink': True
+        })
+    else:
+        return render(request, 'registration/password_reset_confirm.html', {
+            'validlink': False
+        })
+
+
+def password_reset_complete(request):
+    """Şifre sıfırlama tamamlandı view'ı"""
+    return render(request, 'registration/password_reset_complete.html')
+
+
+@login_required
+def profile_edit(request):
+    """Profil düzenleme view'ı - Zorunlu alanlar kontrolü ile"""
+    if request.user.is_superuser:
+        return redirect('/admin/')
+
+    try:
+        profile = request.user.hersteller_profile
+    except HerstellerProfile.DoesNotExist:
+        profile = HerstellerProfile.objects.create(user=request.user)
+
+    # Email alanını kullanıcının kayıtlı email'inden al
+    if not profile.email:
+        profile.email = request.user.email
+        profile.save()
+
+    if request.method == 'POST':
+        form = HerstellerProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            profile = form.save(commit=False)
+            profile.profile_completed = True
+            profile.save()
+            messages.success(request, 'Profil wurde erfolgreich aktualisiert!')
+            return redirect('dashboard')
+    else:
+        form = HerstellerProfileForm(instance=profile)
+
+    # Profil zorunlu mu kontrolü
+    profile_required = not profile.profile_completed and profile.email_verified
+
+    return render(request, 'registration/profile_edit.html', {
+        'form': form,
+        'profile': profile,
+        'profile_required': profile_required,
+        'user_email': request.user.email
+    })

@@ -36,6 +36,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'declarations.middleware.ProfileCompletionMiddleware',
 ]
 
 ROOT_URLCONF = 'app.urls'
@@ -95,3 +96,12 @@ GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
 GOOGLE_REFRESH_TOKEN = os.getenv('GOOGLE_REFRESH_TOKEN')
 GOOGLE_DRIVE_FOLDER_ID = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
+
+# Email Configuration (Gmail API Backend - Zahntec ile aynı)
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'declarations.gmail_backend.GmailApiEmailBackend')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Zahntec Lab <info@zahnteclab.de>')
+
+# Site Configuration
+SITE_URL = os.getenv('SITE_URL', 'http://zahnovia.pythonanywhere.com')
+SITE_DOMAIN = os.getenv('SITE_DOMAIN', 'zahnovia.pythonanywhere.com')
+ADMIN_NOTIFICATION_EMAIL = os.getenv('ADMIN_NOTIFICATION_EMAIL', '')
